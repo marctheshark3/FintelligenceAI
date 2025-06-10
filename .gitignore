@@ -133,6 +133,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -173,6 +174,131 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# FintelligenceAI Specific
+# ======================
+
+# Data directories
+data/chroma/
+data/chroma_dev/
+data/uploads/
+data/experiments/
+data/backups/
+data/cache/
+
+# Cache directories
+.dspy_cache/
+.cache/
+.httpx_cache/
+
+# Logs
+logs/
+*.log
+dev-debug.log
+
+# Model artifacts and checkpoints
+models/checkpoints/
+models/cache/
+*.pt
+*.pth
+*.model
+*.pkl
+
+# Vector database files
+*.faiss
+*.index
+
+# Temporary files
+temp/
+tmp/
+.tmp/
+/tmp/test_response
+
+# API keys and secrets
+.env.local
+.env.production
+.env.staging
+secrets.json
+api_keys.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker volumes data
+postgres_data/
+redis_data/
+chroma_data/
+grafana_data/
+prometheus_data/
+ollama_data/
+
+# Monitoring and metrics
+metrics/
+traces/
+
+# Generated reports and outputs
+reports/
+outputs/
+results/
+validation_results.json
+benchmark_results.json
+optimization_results.json
+
+# IDE specific
+.vscode/settings.json
+.vscode/launch.json
+.cursor/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Performance profiling
+*.prof
+*.profile
+
+# Test artifacts
+test_outputs/
+coverage_html/
+.coverage.*
+
+# Documentation builds
+docs/build/
+docs/dist/
+
+# Jupyter notebook outputs (keep structure, ignore outputs)
+*.ipynb
+!notebooks/examples/*.ipynb
+
+# Configuration overrides
+config/local.yml
+config/dev.yml
+config/prod.yml
+
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
+*.csr
+config/ssl/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Task files
+tasks.json
+tasks/
 
 # Added by Task Master AI
 # Logs
