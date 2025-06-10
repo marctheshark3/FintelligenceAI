@@ -6,12 +6,11 @@ instances with different configurations for various use cases.
 """
 
 import logging
-import os
 from typing import Optional
 
 from ..config.settings import get_settings
 from .embeddings import EmbeddingService
-from .models import VectorStoreConfig, RetrievalConfig, GenerationConfig
+from .models import GenerationConfig, RetrievalConfig, VectorStoreConfig
 from .pipeline import RAGPipeline
 
 logger = logging.getLogger(__name__)
@@ -28,22 +27,22 @@ def create_default_rag_pipeline(
 ) -> RAGPipeline:
     """
     Create a RAG pipeline with default configurations.
-    
+
     Args:
         collection_name: Name for the vector store collection
         persist_directory: Directory for vector store persistence
         embedding_model: Embedding model to use
         generation_model: Generation model to use
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         Configured RAG pipeline instance
     """
     settings = get_settings()
-    
+
     # Use settings default if not provided
     persist_directory = persist_directory or settings.chromadb.persist_directory
-    
+
     # Vector store configuration
     vector_store_defaults = {
         "embedding_dimension": 1536 if "small" in embedding_model else 3072,
@@ -51,12 +50,12 @@ def create_default_rag_pipeline(
     }
     if vector_store:
         vector_store_defaults.update(vector_store)
-    
+
     vector_store_config = VectorStoreConfig(
         collection_name=collection_name,
         **vector_store_defaults,
     )
-    
+
     # Retrieval configuration
     retrieval_defaults = {
         "top_k": 10,
@@ -66,9 +65,9 @@ def create_default_rag_pipeline(
     }
     if retrieval:
         retrieval_defaults.update(retrieval)
-    
+
     retrieval_config = RetrievalConfig(**retrieval_defaults)
-    
+
     # Generation configuration
     generation_defaults = {
         "model_name": generation_model,
@@ -77,15 +76,15 @@ def create_default_rag_pipeline(
     }
     if generation:
         generation_defaults.update(generation)
-    
+
     generation_config = GenerationConfig(**generation_defaults)
-    
+
     # Embedding service
     embedding_service = EmbeddingService(
         model_name=embedding_model,
         api_key=settings.openai.api_key,
     )
-    
+
     # Create pipeline
     pipeline = RAGPipeline(
         vector_store_config=vector_store_config,
@@ -94,7 +93,7 @@ def create_default_rag_pipeline(
         embedding_service=embedding_service,
         persist_directory=persist_directory,
     )
-    
+
     logger.info(f"Created default RAG pipeline with collection: {collection_name}")
     return pipeline
 
@@ -105,11 +104,11 @@ def create_ergoscript_pipeline(
 ) -> RAGPipeline:
     """
     Create a RAG pipeline optimized for ErgoScript code generation.
-    
+
     Args:
         persist_directory: Directory for vector store persistence
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         RAG pipeline optimized for ErgoScript
     """
@@ -134,7 +133,7 @@ def create_ergoscript_pipeline(
             **kwargs.get("generation", {}),
         },
     }
-    
+
     return create_default_rag_pipeline(
         collection_name=ergoscript_overrides["vector_store"]["collection_name"],
         persist_directory=persist_directory,
@@ -150,11 +149,11 @@ def create_documentation_pipeline(
 ) -> RAGPipeline:
     """
     Create a RAG pipeline optimized for documentation queries.
-    
+
     Args:
         persist_directory: Directory for vector store persistence
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         RAG pipeline optimized for documentation
     """
@@ -178,7 +177,7 @@ def create_documentation_pipeline(
             **kwargs.get("generation", {}),
         },
     }
-    
+
     return create_default_rag_pipeline(
         collection_name=documentation_overrides["vector_store"]["collection_name"],
         persist_directory=persist_directory,
@@ -194,11 +193,11 @@ def create_development_pipeline(
 ) -> RAGPipeline:
     """
     Create a RAG pipeline for development and testing.
-    
+
     Args:
         collection_name: Name for the collection
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         RAG pipeline configured for development
     """
@@ -220,7 +219,7 @@ def create_development_pipeline(
             **kwargs.get("generation", {}),
         },
     }
-    
+
     return create_default_rag_pipeline(
         collection_name=dev_overrides["vector_store"]["collection_name"],
         persist_directory="./data/chroma_dev",
@@ -236,16 +235,16 @@ def create_production_pipeline(
 ) -> RAGPipeline:
     """
     Create a RAG pipeline optimized for production use.
-    
+
     Args:
         persist_directory: Directory for vector store persistence
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         RAG pipeline optimized for production
     """
     settings = get_settings()
-    
+
     # Use production settings
     production_overrides = {
         "vector_store": {
@@ -267,7 +266,7 @@ def create_production_pipeline(
             **kwargs.get("generation", {}),
         },
     }
-    
+
     return create_default_rag_pipeline(
         persist_directory=persist_directory or "./data/chroma_prod",
         embedding_model="text-embedding-3-large",
@@ -281,17 +280,17 @@ def get_pipeline_for_environment(
 ) -> RAGPipeline:
     """
     Get a RAG pipeline configured for the current environment.
-    
+
     Args:
         environment: Environment name (development, production, etc.)
         **kwargs: Additional configuration overrides
-        
+
     Returns:
         Environment-appropriate RAG pipeline
     """
     settings = get_settings()
     env = environment or settings.app_environment
-    
+
     if env == "development":
         return create_development_pipeline(**kwargs)
     elif env == "production":
@@ -309,9 +308,9 @@ def get_pipeline_for_environment(
 # Convenience exports
 __all__ = [
     "create_default_rag_pipeline",
-    "create_ergoscript_pipeline", 
+    "create_ergoscript_pipeline",
     "create_documentation_pipeline",
     "create_development_pipeline",
     "create_production_pipeline",
     "get_pipeline_for_environment",
-] 
+]

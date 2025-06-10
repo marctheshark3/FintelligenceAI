@@ -6,22 +6,22 @@ with specialized agents for research, generation, and validation tasks.
 """
 
 from .base import BaseAgent
+from .generation_agent import GenerationAgent
 from .orchestrator import AgentOrchestrator
 from .research_agent import ResearchAgent
-from .generation_agent import GenerationAgent
-from .validation_agent import ValidationAgent
 from .types import (
-    AgentMessage, 
-    AgentRole, 
-    TaskType, 
-    ErgoScriptRequest, 
+    AgentMessage,
+    AgentRole,
+    ConversationContext,
+    ErgoScriptRequest,
     ErgoScriptResponse,
-    ConversationContext
+    TaskType,
 )
+from .validation_agent import ValidationAgent
 
 __all__ = [
     "BaseAgent",
-    "AgentOrchestrator", 
+    "AgentOrchestrator",
     "ResearchAgent",
     "GenerationAgent",
     "ValidationAgent",

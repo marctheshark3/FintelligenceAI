@@ -6,8 +6,8 @@ using DSPy, specialized for ErgoScript smart contract generation.
 """
 
 from .config import get_settings
+from .knowledge import KnowledgeBaseManager, setup_ergoscript_knowledge_base
 from .rag import RAGPipeline, create_rag_pipeline
-from .knowledge import setup_ergoscript_knowledge_base, KnowledgeBaseManager
 
 __version__ = "0.1.0"
 __author__ = "FintelligenceAI Team"
@@ -15,7 +15,7 @@ __author__ = "FintelligenceAI Team"
 # Main components for easy access
 __all__ = [
     "get_settings",
-    "RAGPipeline", 
+    "RAGPipeline",
     "create_rag_pipeline",
     "setup_ergoscript_knowledge_base",
     "KnowledgeBaseManager",

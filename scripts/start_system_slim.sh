@@ -117,7 +117,7 @@ check_service_quick() {
     local url=$2
     local max_attempts=15  # Reduced from 30
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -f -s "$url" > /dev/null 2>&1; then
             success "$service_name is ready!"
@@ -127,7 +127,7 @@ check_service_quick() {
         sleep 1  # Reduced from 2
         ((attempt++))
     done
-    
+
     error "$service_name failed to start after ${max_attempts} attempts"
     return 1
 }
@@ -223,4 +223,4 @@ if $API_READY && $CHROMA_READY; then
 else
     warn "System started but some services may need a moment. Check logs if needed."
     exit 1
-fi 
+fi

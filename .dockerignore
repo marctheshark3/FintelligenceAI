@@ -117,4 +117,4 @@ scripts/start_system.sh
 # Phase completion reports
 phase*_completion_report.json
 validation_results.json
-benchmark_results.json 
+benchmark_results.json

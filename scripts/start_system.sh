@@ -112,7 +112,7 @@ check_service() {
     local url=$2
     local max_attempts=30
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -f -s "$url" > /dev/null 2>&1; then
             success "$service_name is ready!"
@@ -122,7 +122,7 @@ check_service() {
         sleep 2
         ((attempt++))
     done
-    
+
     error "$service_name failed to start after ${max_attempts} attempts"
     return 1
 }
@@ -138,7 +138,7 @@ else
     API_READY=false
 fi
 
-# ChromaDB Health Check  
+# ChromaDB Health Check
 echo -n "ChromaDB (port 8100): "
 if check_service "ChromaDB" "http://localhost:8100/api/v1/heartbeat"; then
     CHROMA_READY=true
@@ -234,4 +234,4 @@ if $API_READY && $CHROMA_READY; then
 else
     warn "System started but some services may need attention. Check the logs above."
     exit 1
-fi 
+fi

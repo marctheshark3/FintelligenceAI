@@ -553,7 +553,7 @@ docker-compose down
 
 ### Important Files
 - `src/fintelligence_ai/api/main.py` - Main application entry point
-- `docker-compose.yml` - Docker services configuration  
+- `docker-compose.yml` - Docker services configuration
 - `.env` - Environment configuration
 - `pyproject.toml` - Python dependencies
 - `API_TESTS.md` - API testing guide
@@ -566,6 +566,6 @@ docker-compose down
 
 ---
 
-**🎉 You're ready to use FintelligenceAI!** 
+**🎉 You're ready to use FintelligenceAI!**
 
-Start with the [Quick Start (Local)](#quick-start-local) section for the fastest setup, then explore the [API Testing Guide](API_TESTS.md) to try out the features. 
+Start with the [Quick Start (Local)](#quick-start-local) section for the fastest setup, then explore the [API Testing Guide](API_TESTS.md) to try out the features.

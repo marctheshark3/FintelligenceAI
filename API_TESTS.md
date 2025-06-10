@@ -152,7 +152,7 @@ echo "🧪 Testing FintelligenceAI API..."
 echo "1. Health Check..."
 curl -s -X GET "$BASE_URL/health" | jq '.status' || echo "❌ Failed"
 
-# Test 2: Agent Status  
+# Test 2: Agent Status
 echo "2. Agent Status..."
 curl -s -X GET "$BASE_URL/agents/status" | jq '.orchestrator.status' || echo "❌ Failed"
 
@@ -197,15 +197,15 @@ hey -n 10 -c 2 -H "Content-Type: application/json" \
 # Invalid JSON
 curl -X POST "http://localhost:8000/agents/research" \
   -H "Content-Type: application/json" \
-  -d '{invalid json}' 
+  -d '{invalid json}'
 
 # Missing required fields
 curl -X POST "http://localhost:8000/agents/generate-code" \
   -H "Content-Type: application/json" \
-  -d '{}' 
+  -d '{}'
 
 # Non-existent endpoint
-curl -X GET "http://localhost:8000/non-existent" 
+curl -X GET "http://localhost:8000/non-existent"
 ```
 
 ## Performance Testing
@@ -265,7 +265,7 @@ http GET localhost:8000/health
 # Research query
 http POST localhost:8000/agents/research query="ErgoScript tutorial" scope="quick"
 
-# Code generation  
+# Code generation
 http POST localhost:8000/agents/generate-code/simple \
   description="Simple token contract" \
   complexity_level="beginner"
@@ -283,4 +283,4 @@ wscat -c ws://localhost:8000/ws
 
 ---
 
-**Note**: Some endpoints may return errors initially due to missing configurations (database connections, API keys, etc.). This is normal for a development setup. Focus on testing the core health and status endpoints first. 
+**Note**: Some endpoints may return errors initially due to missing configurations (database connections, API keys, etc.). This is normal for a development setup. Focus on testing the core health and status endpoints first.

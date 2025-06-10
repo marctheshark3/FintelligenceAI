@@ -18,20 +18,20 @@ NC='\033[0m' # No Color
 # Function to test API endpoint
 test_endpoint() {
     local name="$1"
-    local method="$2" 
+    local method="$2"
     local endpoint="$3"
     local data="$4"
-    
+
     echo -n "Testing $name... "
-    
+
     if [ "$method" = "GET" ]; then
         response=$(curl -s -w "%{http_code}" -X GET "$BASE_URL$endpoint" -o /tmp/response.json)
     else
         response=$(curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST "$BASE_URL$endpoint" -d "$data" -o /tmp/response.json)
     fi
-    
+
     http_code="${response: -3}"
-    
+
     if [ "$http_code" -eq 200 ]; then
         echo -e "${GREEN}✅ PASSED${NC} ($http_code)"
         return 0
@@ -65,7 +65,7 @@ if test_endpoint "Agent Status" "GET" "/agents/status"; then ((PASSED++)); fi
 echo -e "\n${YELLOW}🔬 Simple Operations${NC}"
 echo "Note: These tests may fail if OpenAI API key is not configured"
 
-# Simple research query  
+# Simple research query
 if test_endpoint "Research Query" "POST" "/agents/research" '{"query": "ErgoScript basics", "scope": "quick"}'; then ((PASSED++)); fi
 ((TOTAL++))
 
@@ -98,4 +98,4 @@ else
     echo -e "${RED}❌ Many tests failed. Check that FintelligenceAI is running properly.${NC}"
     echo "Try: PYTHONPATH=src poetry run python src/fintelligence_ai/api/main.py"
     exit 1
-fi 
+fi

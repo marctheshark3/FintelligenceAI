@@ -34,10 +34,10 @@ test_endpoint() {
     local endpoint="$3"
     local data="$4"
     local expected_status="${5:-200}"
-    
+
     ((TEST_COUNT++))
     echo -n "Test $TEST_COUNT: $test_name... "
-    
+
     if [ "$method" = "GET" ]; then
         response=$(curl -s -w "%{http_code}" -o /tmp/test_response "$API_URL$endpoint" 2>/dev/null || echo "000")
     else
@@ -46,7 +46,7 @@ test_endpoint() {
             -d "$data" \
             "$API_URL$endpoint" 2>/dev/null || echo "000")
     fi
-    
+
     if [ "$response" = "$expected_status" ]; then
         success "$test_name"
         return 0
@@ -82,7 +82,7 @@ test_endpoint "Agent Status" "GET" "/agents/status"
 # Test 3: Agent Health
 test_endpoint "Agent Health Check" "GET" "/agents/health"
 
-# Test 4: Simple Research Query  
+# Test 4: Simple Research Query
 test_endpoint "Research Agent" "POST" "/agents/research" '{
     "query": "What is ErgoScript?",
     "max_results": 2
@@ -140,4 +140,4 @@ else
 fi
 
 # Cleanup
-rm -f /tmp/test_response 
+rm -f /tmp/test_response

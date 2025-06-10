@@ -154,4 +154,4 @@ CHROMA_PORT=8100
 
 **🎉 You have a working FintelligenceAI system!**
 
-The core framework is running perfectly. Configure your OpenAI API key to unlock the full AI-powered ErgoScript generation capabilities. 
+The core framework is running perfectly. Configure your OpenAI API key to unlock the full AI-powered ErgoScript generation capabilities.

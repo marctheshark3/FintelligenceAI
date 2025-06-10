@@ -126,4 +126,4 @@ volumes:
 
 networks:
   fintelligence-network:
-    driver: bridge 
+    driver: bridge
