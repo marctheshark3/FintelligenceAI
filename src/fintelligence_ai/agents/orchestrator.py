@@ -111,7 +111,9 @@ class AgentOrchestrator(BaseAgent):
     ) -> Any:
         """Execute orchestrated tasks."""
         if task_type == TaskType.CODE_GENERATION:
-            return await self._handle_ergoscript_workflow(content, context, metadata)
+            return await self._handle_code_generation_workflow(
+                content, context, metadata
+            )
         elif task_type == TaskType.RESEARCH_QUERY:
             return await self._delegate_to_agent(
                 "research", task_type, content, context, metadata
@@ -123,22 +125,25 @@ class AgentOrchestrator(BaseAgent):
         else:
             raise ValueError(f"Unsupported task type for Orchestrator: {task_type}")
 
-    async def _handle_ergoscript_workflow(
+    async def _handle_code_generation_workflow(
         self,
         requirements: str,
         context: Optional[ConversationContext] = None,
         metadata: Optional[dict[str, Any]] = None,
     ) -> ErgoScriptResponse:
         """
-        Handle complete ErgoScript generation workflow.
+        Handle complete code generation workflow.
 
         This orchestrates the full workflow:
         1. Research relevant documentation and examples
-        2. Generate ErgoScript code
+        2. Generate code based on available documentation
         3. Validate the generated code
         4. Provide comprehensive response
+
+        The system automatically adapts to the type of documentation
+        available in the knowledge base.
         """
-        self.logger.info("Starting ErgoScript generation workflow")
+        self.logger.info("Starting code generation workflow")
         correlation_id = uuid4()
 
         try:
@@ -172,11 +177,11 @@ class AgentOrchestrator(BaseAgent):
                 generation_result, validation_result, research_result
             )
 
-            self.logger.info("ErgoScript workflow completed successfully")
+            self.logger.info("Code generation workflow completed successfully")
             return final_response
 
         except Exception as e:
-            self.logger.error(f"Error in ErgoScript workflow: {e}")
+            self.logger.error(f"Error in code generation workflow: {e}")
             raise
 
     async def _research_phase(
@@ -188,10 +193,8 @@ class AgentOrchestrator(BaseAgent):
     ) -> dict[str, Any]:
         """Execute research phase."""
         try:
-            # Create research query
-            research_query = (
-                f"ErgoScript examples and documentation for: {requirements}"
-            )
+            # Create generic research query - let RAG find relevant content
+            research_query = f"examples and documentation for: {requirements}"
 
             # Execute research task
             research_task_result = await self.research_agent.execute_task(

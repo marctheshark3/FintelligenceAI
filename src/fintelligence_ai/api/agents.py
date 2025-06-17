@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 
 # Request/Response Models
 class GenerateCodeRequest(BaseModel):
-    """Request model for ErgoScript code generation."""
+    """Request model for code generation."""
 
     description: str = Field(
-        description="Natural language description of the required script"
+        description="Natural language description of the required code"
     )
     use_case: Optional[str] = Field(
-        default=None, description="Specific use case (token, auction, oracle, etc.)"
+        default=None, description="Specific use case or application type"
     )
     complexity_level: str = Field(
         default="intermediate",
@@ -73,10 +73,24 @@ class ResearchRequest(BaseModel):
     )
 
 
+class ResearchSummaryRequest(BaseModel):
+    """Request model for research summary generation."""
+
+    query: str = Field(description="Summary query or focus area")
+    research_context: dict = Field(description="Research context to summarize")
+    scope: str = Field(default="focused_summary", description="Summary scope")
+    include_examples: bool = Field(
+        default=True, description="Include code examples in summary"
+    )
+    session_id: Optional[UUID] = Field(
+        default=None, description="Session ID for context"
+    )
+
+
 class ValidateCodeRequest(BaseModel):
     """Request model for code validation."""
 
-    code: str = Field(description="ErgoScript code to validate")
+    code: str = Field(description="Code to validate")
     use_case: Optional[str] = Field(default=None, description="Use case context")
     validation_criteria: dict[str, Any] = Field(
         default_factory=lambda: {
@@ -125,7 +139,12 @@ async def get_generation_agent() -> GenerationAgent:
     global _generation_agent
     if _generation_agent is None:
         logger.info("Initializing Generation Agent")
+
+        # Initialize generation agent with default configuration
+        # Note: Generation agent uses DSPy modules for code generation
+        # RAG integration happens at the orchestrator level
         _generation_agent = GenerationAgent()
+        logger.info("Generation Agent initialized successfully")
     return _generation_agent
 
 
@@ -133,8 +152,25 @@ async def get_research_agent() -> ResearchAgent:
     """Get or create the research agent instance."""
     global _research_agent
     if _research_agent is None:
-        logger.info("Initializing Research Agent")
-        _research_agent = ResearchAgent()
+        logger.info("Initializing Research Agent with RAG pipeline")
+
+        # Import RAG pipeline factory
+        from fintelligence_ai.config import get_settings
+        from fintelligence_ai.rag.factory import create_default_rag_pipeline
+
+        # Get settings to use the provider-specific collection name
+        settings = get_settings()
+        collection_name = settings.get_provider_collection_name()
+        persist_directory = settings.get_provider_persist_directory()
+
+        # Create RAG pipeline with the provider-specific collection
+        rag_pipeline = create_default_rag_pipeline(
+            collection_name=collection_name, persist_directory=persist_directory
+        )
+
+        # Initialize research agent with RAG pipeline
+        _research_agent = ResearchAgent(rag_pipeline=rag_pipeline)
+        logger.info(f"Research Agent initialized with collection: {collection_name}")
     return _research_agent
 
 
@@ -149,18 +185,19 @@ async def get_validation_agent() -> ValidationAgent:
 
 # API Endpoints
 @router.post("/generate-code", response_model=ErgoScriptResponse)
-async def generate_ergoscript_code(
+async def generate_code(
     request: GenerateCodeRequest,
     orchestrator: AgentOrchestrator = Depends(get_orchestrator),
 ) -> ErgoScriptResponse:
     """
-    Generate ErgoScript code using the orchestrated agent workflow.
+    Generate code using the orchestrated agent workflow.
 
     This endpoint orchestrates research, generation, and validation phases
-    to provide comprehensive ErgoScript code generation with context.
+    to provide comprehensive code generation with context. The system
+    automatically adapts to the type of documentation in the knowledge base.
     """
     try:
-        logger.info(f"Generating ErgoScript code for: {request.description}")
+        logger.info(f"Generating code for: {request.description}")
 
         # Create conversation context
         context = ConversationContext(
@@ -196,8 +233,8 @@ async def generate_ergoscript_code(
             )
 
     except Exception as e:
-        logger.error(f"Error generating ErgoScript code: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error generating code: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 @router.post("/generate-code/simple")
@@ -206,10 +243,11 @@ async def generate_code_simple(
     generation_agent: GenerationAgent = Depends(get_generation_agent),
 ) -> ErgoScriptResponse:
     """
-    Generate ErgoScript code using only the generation agent (faster, less comprehensive).
+    Generate code using only the generation agent (faster, less comprehensive).
 
     This endpoint bypasses orchestration for faster code generation
-    when research and validation are not required.
+    when research and validation are not required. The system automatically
+    adapts to the type of documentation in the knowledge base.
     """
     try:
         logger.info(f"Simple code generation for: {request.description}")
@@ -244,7 +282,7 @@ async def generate_code_simple(
 
     except Exception as e:
         logger.error(f"Error in simple code generation: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 @router.post("/research")
@@ -290,7 +328,102 @@ async def research_query(
 
     except Exception as e:
         logger.error(f"Error in research query: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+
+
+@router.post("/research-summary")
+async def research_summary(
+    request: ResearchSummaryRequest,
+    research_agent: ResearchAgent = Depends(get_research_agent),
+) -> dict[str, Any]:
+    """
+    Generate a focused summary from research context for code generation.
+
+    This endpoint processes research findings into a concise, actionable summary
+    that can be used to inform code generation with specific patterns and examples.
+    """
+    try:
+        logger.info(f"Research summary for: {request.query}")
+
+        # Extract research context
+        research_context = request.research_context
+        findings = research_context.get("findings", "")
+        sources = research_context.get("sources", [])
+        recommendations = research_context.get("recommendations", "")
+
+        # Create a focused summary query
+        summary_query = f"""
+        Create a focused summary for ErgoScript code generation based on this research:
+
+        ORIGINAL QUERY: {request.query}
+
+        RESEARCH FINDINGS:
+        {findings}
+
+        SOURCES: {', '.join(sources) if isinstance(sources, list) else str(sources)}
+
+        RECOMMENDATIONS:
+        {recommendations}
+
+        TASK: Create a concise summary that includes:
+        1. Key concepts and patterns relevant to code generation
+        2. Specific ErgoScript syntax and methods to use
+        3. Best practices and common pitfalls to avoid
+        4. Concrete examples if available
+
+        Focus on actionable information that a code generation agent can use directly.
+        """
+
+        # Create context for summary generation
+        context = ConversationContext(
+            session_id=request.session_id or uuid4(),
+            context_data={
+                "scope": "focused_summary",
+                "original_query": request.query,
+                "research_context": research_context,
+            },
+        )
+
+        # Prepare metadata for summary
+        metadata = {
+            "scope": "focused_summary",
+            "include_examples": request.include_examples,
+            "original_scope": research_context.get("scope", "comprehensive"),
+            "summary_purpose": "code_generation",
+        }
+
+        # Execute summary task using research agent
+        result = await research_agent.execute_task(
+            task_type=TaskType.RESEARCH_QUERY,
+            content=summary_query,
+            context=context,
+            metadata=metadata,
+        )
+
+        if result.success:
+            # Enhance the result with summary-specific metadata
+            summary_result = result.result
+            summary_result.update(
+                {
+                    "summary_type": "code_generation_focused",
+                    "original_query": request.query,
+                    "original_research_scope": research_context.get(
+                        "scope", "comprehensive"
+                    ),
+                    "summary_created_at": metadata.get("timestamp"),
+                    "ready_for_code_generation": True,
+                }
+            )
+            return summary_result
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Summary generation failed: {result.error_message}",
+            )
+
+    except Exception as e:
+        logger.error(f"Error in research summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 @router.post("/validate-code")
@@ -299,13 +432,14 @@ async def validate_code(
     validation_agent: ValidationAgent = Depends(get_validation_agent),
 ) -> dict[str, Any]:
     """
-    Validate ErgoScript code using the validation agent.
+    Validate code using the validation agent.
 
     This endpoint provides syntax checking, semantic analysis,
-    and security assessment for ErgoScript code.
+    and security assessment for code. The system automatically
+    adapts to the type of code being validated.
     """
     try:
-        logger.info("Validating ErgoScript code")
+        logger.info("Validating code")
 
         # Create context
         context = ConversationContext(
@@ -336,7 +470,7 @@ async def validate_code(
 
     except Exception as e:
         logger.error(f"Error in code validation: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 @router.get("/status", response_model=OrchestrationStatusResponse)
@@ -365,7 +499,7 @@ async def get_agent_status(
 
     except Exception as e:
         logger.error(f"Error getting agent status: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 @router.post("/reset")
@@ -390,7 +524,7 @@ async def reset_agents(
 
     except Exception as e:
         logger.error(f"Error resetting agents: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
 # Background task endpoints

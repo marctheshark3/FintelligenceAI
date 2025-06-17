@@ -185,6 +185,8 @@ data/uploads/
 data/experiments/
 data/backups/
 data/cache/
+src/data/chroma/
+**/data/chroma/
 
 # Cache directories
 .dspy_cache/

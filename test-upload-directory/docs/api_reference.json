@@ -1,0 +1,72 @@
+{
+  "ergo_api": {
+    "version": "1.0",
+    "description": "Ergo Node API Reference",
+    "endpoints": {
+      "info": {
+        "method": "GET",
+        "url": "/info",
+        "description": "Get node information",
+        "response": {
+          "name": "string",
+          "appVersion": "string",
+          "fullHeight": "number",
+          "maxPeerHeight": "number",
+          "localScore": "number",
+          "parameters": {
+            "height": "number",
+            "storageFeeFactor": "number",
+            "minValuePerByte": "number",
+            "maxBlockSize": "number",
+            "maxBlockCost": "number",
+            "blockVersion": "number"
+          }
+        }
+      },
+      "blocks": {
+        "method": "GET",
+        "url": "/blocks/{headerId}",
+        "description": "Get block by header ID",
+        "parameters": {
+          "headerId": "string (required)"
+        },
+        "response": {
+          "header": "object",
+          "blockTransactions": "object",
+          "adProofs": "object",
+          "extension": "object"
+        }
+      },
+      "transactions": {
+        "method": "GET",
+        "url": "/transactions/unconfirmed",
+        "description": "Get unconfirmed transactions",
+        "response": "array of transaction objects"
+      },
+      "wallet": {
+        "method": "GET",
+        "url": "/wallet/status",
+        "description": "Get wallet status",
+        "response": {
+          "isInitialized": "boolean",
+          "isUnlocked": "boolean",
+          "changeAddress": "string",
+          "walletHeight": "number",
+          "error": "string"
+        }
+      }
+    },
+    "examples": {
+      "get_node_info": {
+        "request": "curl http://localhost:9053/info",
+        "response": {
+          "name": "ergo-mainnet-4.0.23",
+          "appVersion": "4.0.23",
+          "fullHeight": 850000,
+          "maxPeerHeight": 850000,
+          "localScore": 1234567890
+        }
+      }
+    }
+  }
+}

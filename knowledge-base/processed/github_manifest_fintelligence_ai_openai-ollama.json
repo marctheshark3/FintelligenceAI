@@ -1,0 +1,367 @@
+{
+  "https://github.com/ergo-pad/ergo-python-appkit": {
+    "repo_name": "ergo-python-appkit",
+    "processed_at": "2025-06-11T17:31:12.225595",
+    "files_count": 6,
+    "files": [
+      {
+        "path": "README.md",
+        "name": "README.md",
+        "extension": ".md",
+        "category": "reference",
+        "size_bytes": 2035,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/README.md"
+      },
+      {
+        "path": "setup.py",
+        "name": "setup.py",
+        "extension": ".py",
+        "category": "examples",
+        "size_bytes": 1121,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/setup.py"
+      },
+      {
+        "path": "ergo_python_appkit/appkit.py",
+        "name": "appkit.py",
+        "extension": ".py",
+        "category": "examples",
+        "size_bytes": 21339,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/ergo_python_appkit/appkit.py"
+      },
+      {
+        "path": "ergo_python_appkit/ErgoBox.py",
+        "name": "ErgoBox.py",
+        "extension": ".py",
+        "category": "examples",
+        "size_bytes": 1800,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/ergo_python_appkit/ErgoBox.py"
+      },
+      {
+        "path": "ergo_python_appkit/ErgoContractBase.py",
+        "name": "ErgoContractBase.py",
+        "extension": ".py",
+        "category": "examples",
+        "size_bytes": 1201,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/ergo_python_appkit/ErgoContractBase.py"
+      },
+      {
+        "path": "ergo_python_appkit/ErgoTransaction.py",
+        "name": "ErgoTransaction.py",
+        "extension": ".py",
+        "category": "examples",
+        "size_bytes": 2567,
+        "url": "https://github.com/ergo-pad/ergo-python-appkit/blob/main/ergo_python_appkit/ErgoTransaction.py"
+      }
+    ]
+  },
+  "https://github.com/ergoplatform/eips": {
+    "repo_name": "eips",
+    "processed_at": "2025-06-11T17:31:14.861765",
+    "files_count": 23,
+    "files": [
+      {
+        "path": "eip-0022.md",
+        "name": "eip-0022.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 8148,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0022.md"
+      },
+      {
+        "path": "eip-0019.md",
+        "name": "eip-0019.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 8237,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0019.md"
+      },
+      {
+        "path": "eip-0005.md",
+        "name": "eip-0005.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 12589,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0005.md"
+      },
+      {
+        "path": "eip-0002.md",
+        "name": "eip-0002.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 5106,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0002.md"
+      },
+      {
+        "path": "eip-0043.md",
+        "name": "eip-0043.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6086,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0043.md"
+      },
+      {
+        "path": "README.md",
+        "name": "README.md",
+        "extension": ".md",
+        "category": "reference",
+        "size_bytes": 2130,
+        "url": "https://github.com/ergoplatform/eips/blob/main/README.md"
+      },
+      {
+        "path": "eip-0001.md",
+        "name": "eip-0001.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 9954,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0001.md"
+      },
+      {
+        "path": "eip-0037.md",
+        "name": "eip-0037.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6957,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0037.md"
+      },
+      {
+        "path": "eip-0020.md",
+        "name": "eip-0020.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 17233,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0020.md"
+      },
+      {
+        "path": "eip-0021.md",
+        "name": "eip-0021.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6005,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0021.md"
+      },
+      {
+        "path": "eip-0017.md",
+        "name": "eip-0017.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6376,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0017.md"
+      },
+      {
+        "path": "eip-0034.md",
+        "name": "eip-0034.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 5050,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0034.md"
+      },
+      {
+        "path": "eip-0029.md",
+        "name": "eip-0029.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6149,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0029.md"
+      },
+      {
+        "path": "eip-0031.md",
+        "name": "eip-0031.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 12046,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0031.md"
+      },
+      {
+        "path": "eip-0027.md",
+        "name": "eip-0027.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 13419,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0027.md"
+      },
+      {
+        "path": "eip-0006.md",
+        "name": "eip-0006.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 13752,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0006.md"
+      },
+      {
+        "path": "eip-0004.md",
+        "name": "eip-0004.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 7677,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0004.md"
+      },
+      {
+        "path": "eip-0003.md",
+        "name": "eip-0003.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 3488,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0003.md"
+      },
+      {
+        "path": "eip-0025.md",
+        "name": "eip-0025.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 4014,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0025.md"
+      },
+      {
+        "path": "eip-0044.md",
+        "name": "eip-0044.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 3766,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0044.md"
+      },
+      {
+        "path": "eip-0015.md",
+        "name": "eip-0015.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 11291,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0015.md"
+      },
+      {
+        "path": "eip-0024.md",
+        "name": "eip-0024.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6798,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0024.md"
+      },
+      {
+        "path": "eip-0039.md",
+        "name": "eip-0039.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 1869,
+        "url": "https://github.com/ergoplatform/eips/blob/main/eip-0039.md"
+      }
+    ]
+  },
+  "https://github.com/ergoplatform/ergoscript-by-example": {
+    "repo_name": "ergoscript-by-example",
+    "processed_at": "2025-06-11T17:31:17.374466",
+    "files_count": 14,
+    "files": [
+      {
+        "path": "grantorBeneficiaryPinLock.md",
+        "name": "grantorBeneficiaryPinLock.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 9967,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/grantorBeneficiaryPinLock.md"
+      },
+      {
+        "path": "stealthAddress.md",
+        "name": "stealthAddress.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 6908,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/stealthAddress.md"
+      },
+      {
+        "path": "selfReplicatingTokenSale.md",
+        "name": "selfReplicatingTokenSale.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 8610,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/selfReplicatingTokenSale.md"
+      },
+      {
+        "path": "tokenSalesService.md",
+        "name": "tokenSalesService.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 10759,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/tokenSalesService.md"
+      },
+      {
+        "path": "simpleSend.md",
+        "name": "simpleSend.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 7572,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/simpleSend.md"
+      },
+      {
+        "path": "README.md",
+        "name": "README.md",
+        "extension": ".md",
+        "category": "reference",
+        "size_bytes": 4157,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/README.md"
+      },
+      {
+        "path": "headsOrTailsParallel.md",
+        "name": "headsOrTailsParallel.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 33444,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/headsOrTailsParallel.md"
+      },
+      {
+        "path": "headsOrTails.md",
+        "name": "headsOrTails.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 18171,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/headsOrTails.md"
+      },
+      {
+        "path": "timedFund.md",
+        "name": "timedFund.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 8501,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/timedFund.md"
+      },
+      {
+        "path": "singleChainSwap.md",
+        "name": "singleChainSwap.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 10404,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/singleChainSwap.md"
+      },
+      {
+        "path": "escrowDepositContract.md",
+        "name": "escrowDepositContract.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 9435,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/escrowDepositContract.md"
+      },
+      {
+        "path": "example_template.md",
+        "name": "example_template.md",
+        "extension": ".md",
+        "category": "examples",
+        "size_bytes": 337,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/example_template.md"
+      },
+      {
+        "path": "pinLockContract.md",
+        "name": "pinLockContract.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 5973,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/pinLockContract.md"
+      },
+      {
+        "path": "doubleChainSwap.md",
+        "name": "doubleChainSwap.md",
+        "extension": ".md",
+        "category": "general",
+        "size_bytes": 9976,
+        "url": "https://github.com/ergoplatform/ergoscript-by-example/blob/main/doubleChainSwap.md"
+      }
+    ]
+  }
+}

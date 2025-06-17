@@ -1,0 +1,8 @@
+documents/test-doc.md
+https://github.com/ergo-pad/ergo-python-appkit
+https://github.com/ergoplatform/eips
+https://github.com/ergoplatform/ergoscript-by-example
+documents/test-doc.md
+https://github.com/ergo-pad/ergo-python-appkit
+https://github.com/ergoplatform/eips
+https://github.com/ergoplatform/ergoscript-by-example

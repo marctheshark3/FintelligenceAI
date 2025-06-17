@@ -1,0 +1,5 @@
+# Add URLs to scrape, one per line
+# Examples:
+# https://docs.ergoplatform.com/dev/smart-contracts/
+# https://github.com/ergoplatform/eips/blob/master/eip-0004.md
+# https://ergoscript.org/tutorial/

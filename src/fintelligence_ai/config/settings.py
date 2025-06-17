@@ -25,6 +25,22 @@ class DatabaseSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="POSTGRES_", case_sensitive=False)
 
+    def get_provider_specific_url(self, model_provider: str) -> str:
+        """Get database URL with provider-specific database name."""
+        base_url = self.url
+
+        # Extract the base part before the database name
+        if "/fintelligence_ai" in base_url:
+            base_part = base_url.split("/fintelligence_ai")[0]
+            provider_db_name = f"fintelligence_ai_{model_provider}"
+            return f"{base_part}/{provider_db_name}"
+
+        # If it doesn't match expected pattern, append provider suffix
+        if base_url.endswith("/"):
+            return f"{base_url}fintelligence_ai_{model_provider}"
+        else:
+            return f"{base_url}-{model_provider}"
+
 
 class RedisSettings(BaseSettings):
     """Redis configuration settings."""
@@ -54,6 +70,33 @@ class ChromaDBSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="CHROMA_", case_sensitive=False)
 
+    def get_provider_specific_collection(self, model_provider: str) -> str:
+        """Get collection name with provider-specific suffix."""
+        base_name = self.collection_name
+
+        # More robust suffix detection - check for both underscore and hyphen variants
+        provider_patterns = [
+            f"_{model_provider}",  # underscore variant
+            f"-{model_provider}",  # hyphen variant
+        ]
+
+        # If collection name already has a provider suffix, use as-is
+        for pattern in provider_patterns:
+            if base_name.endswith(pattern):
+                return base_name
+
+        # Check if base name contains provider name anywhere (legacy handling)
+        if f"_{model_provider}" in base_name or f"-{model_provider}" in base_name:
+            return base_name
+
+        # Add provider suffix to base collection name (prefer underscore for consistency)
+        return f"{base_name}_{model_provider}"
+
+    def get_provider_specific_directory(self, model_provider: str) -> str:
+        """Get persist directory with provider-specific subdirectory."""
+        base_dir = self.persist_directory.rstrip("/")
+        return f"{base_dir}/{model_provider}"
+
 
 class OpenAISettings(BaseSettings):
     """OpenAI configuration settings."""
@@ -73,10 +116,46 @@ class OpenAISettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="OPENAI_", case_sensitive=False)
 
 
+class OllamaSettings(BaseSettings):
+    """Ollama configuration settings for local-only mode."""
+
+    host: str = Field(default="localhost", description="Ollama server host")
+    port: int = Field(default=11434, description="Ollama server port")
+    model: str = Field(default="llama3.2", description="Default Ollama model")
+    temperature: float = Field(
+        default=0.1, ge=0.0, le=2.0, description="Temperature for generation"
+    )
+    max_tokens: int = Field(
+        default=4096, gt=0, description="Maximum tokens for generation"
+    )
+    embedding_model: str = Field(
+        default="nomic-embed-text", description="Ollama embedding model"
+    )
+    timeout: int = Field(default=300, description="Request timeout in seconds")
+    keep_alive: str = Field(default="5m", description="Keep model alive duration")
+    # Connection settings
+    base_url: Optional[str] = Field(
+        default=None, description="Full base URL (overrides host:port)"
+    )
+    verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
+
+    model_config = SettingsConfigDict(env_prefix="OLLAMA_", case_sensitive=False)
+
+    @property
+    def url(self) -> str:
+        """Get the full Ollama server URL."""
+        if self.base_url:
+            return self.base_url
+        return f"http://{self.host}:{self.port}"
+
+
 class DSPySettings(BaseSettings):
     """DSPy configuration settings."""
 
     model_provider: str = Field(default="openai", description="DSPy model provider")
+    local_mode: bool = Field(
+        default=False, description="Enable local-only mode (uses Ollama)"
+    )
     cache_dir: str = Field(
         default="./data/dspy_cache", description="DSPy cache directory"
     )
@@ -94,11 +173,19 @@ class DSPySettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="DSPY_", case_sensitive=False)
 
+    @validator("model_provider")
+    def validate_model_provider(cls, v):
+        """Validate model provider is supported."""
+        valid_providers = ["openai", "ollama", "claude", "cohere"]
+        if v not in valid_providers:
+            raise ValueError(f"model_provider must be one of: {valid_providers}")
+        return v
+
 
 class ErgoSettings(BaseSettings):
     """Ergo blockchain configuration settings."""
 
-    node_url: str = Field(default="http://localhost:9052", description="Ergo node URL")
+    node_url: str = Field(default="http://localhost:9053", description="Ergo node URL")
     node_api_key: Optional[str] = Field(default=None, description="Ergo node API key")
     explorer_url: str = Field(
         default="https://api.ergoplatform.com", description="Ergo explorer URL"
@@ -209,6 +296,7 @@ class Settings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     chromadb: ChromaDBSettings = Field(default_factory=ChromaDBSettings)
     openai: OpenAISettings = Field(default_factory=OpenAISettings)
+    ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     dspy: DSPySettings = Field(default_factory=DSPySettings)
     ergo: ErgoSettings = Field(default_factory=ErgoSettings)
     api: APISettings = Field(default_factory=APISettings)
@@ -247,6 +335,18 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in testing mode."""
         return self.app_environment == "testing"
+
+    def get_provider_database_url(self) -> str:
+        """Get database URL with provider-specific database name."""
+        return self.database.get_provider_specific_url(self.dspy.model_provider)
+
+    def get_provider_collection_name(self) -> str:
+        """Get ChromaDB collection name with provider-specific suffix."""
+        return self.chromadb.get_provider_specific_collection(self.dspy.model_provider)
+
+    def get_provider_persist_directory(self) -> str:
+        """Get ChromaDB persist directory with provider-specific subdirectory."""
+        return self.chromadb.get_provider_specific_directory(self.dspy.model_provider)
 
 
 @lru_cache

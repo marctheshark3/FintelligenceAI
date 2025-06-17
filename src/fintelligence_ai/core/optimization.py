@@ -149,23 +149,82 @@ class DSPyOptimizer:
             if self.config.llm_config:
                 model_config = self.config.llm_config
             else:
-                model_config = {
-                    "model": self.settings.default_model,
-                    "max_tokens": 1000,
-                    "temperature": 0.0,
-                }
+                # Determine default model based on provider and local mode
+                if (
+                    self.settings.dspy.local_mode
+                    or self.settings.dspy.model_provider == "ollama"
+                ):
+                    model_config = {
+                        "model": self.settings.ollama.model,
+                        "max_tokens": self.settings.ollama.max_tokens,
+                        "temperature": self.settings.ollama.temperature,
+                    }
+                else:
+                    model_config = {
+                        "model": self.settings.openai.model,
+                        "max_tokens": 1000,
+                        "temperature": 0.0,
+                    }
 
-            # Set up the language model
-            if "gpt" in model_config.get("model", "").lower():
-                lm = dspy.OpenAI(**model_config)
-            elif "claude" in model_config.get("model", "").lower():
-                lm = dspy.Claude(**model_config)
+            # Set up the language model based on provider
+            provider = self.settings.dspy.model_provider.lower()
+
+            if self.settings.dspy.local_mode or provider == "ollama":
+                # Use Ollama for local-only mode
+                from .ollama import get_ollama_dspy_model
+
+                lm = get_ollama_dspy_model(
+                    model=model_config.get("model"),
+                    temperature=model_config.get("temperature", 0.1),
+                    max_tokens=model_config.get("max_tokens", 4096),
+                )
+            elif "gpt" in model_config.get("model", "").lower() or provider == "openai":
+                # Use the correct DSPy LM interface for OpenAI
+                model_name = model_config.get("model", "gpt-4")
+                if not model_name.startswith("openai/"):
+                    model_name = f"openai/{model_name}"
+
+                lm = dspy.LM(
+                    model=model_name,
+                    api_key=model_config.get("api_key"),
+                    temperature=model_config.get("temperature", 0.0),
+                    max_tokens=model_config.get("max_tokens", 1000),
+                )
+            elif (
+                "claude" in model_config.get("model", "").lower()
+                or provider == "claude"
+            ):
+                # Use the correct DSPy LM interface for Claude
+                model_name = model_config.get("model", "claude-3-sonnet")
+                if not model_name.startswith("anthropic/"):
+                    model_name = f"anthropic/{model_name}"
+
+                lm = dspy.LM(
+                    model=model_name,
+                    api_key=model_config.get("api_key"),
+                    temperature=model_config.get("temperature", 0.0),
+                    max_tokens=model_config.get("max_tokens", 1000),
+                )
             else:
-                # Default to OpenAI
-                lm = dspy.OpenAI(**model_config)
+                # Default to OpenAI if no specific provider
+                model_name = model_config.get("model", "gpt-4")
+                if not model_name.startswith("openai/"):
+                    model_name = f"openai/{model_name}"
+
+                lm = dspy.LM(
+                    model=model_name,
+                    api_key=model_config.get("api_key"),
+                    temperature=model_config.get("temperature", 0.0),
+                    max_tokens=model_config.get("max_tokens", 1000),
+                )
 
             dspy.configure(lm=lm)
-            self.logger.info(f"DSPy configured with model: {model_config.get('model')}")
+            provider_name = (
+                "Ollama (Local)" if self.settings.dspy.local_mode else provider.title()
+            )
+            self.logger.info(
+                f"DSPy configured with {provider_name} - Model: {model_config.get('model')}"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to setup DSPy: {e}")

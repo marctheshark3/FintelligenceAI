@@ -21,6 +21,8 @@ class DocumentSource(str, Enum):
     EXAMPLES = "examples"
     COMMUNITY = "community"
     TUTORIALS = "tutorials"
+    LOCAL_FILES = "local_files"
+    WEB_SCRAPING = "web_scraping"
 
 
 class DocumentCategory(str, Enum):
@@ -32,6 +34,9 @@ class DocumentCategory(str, Enum):
     BEST_PRACTICES = "best_practices"
     PATTERNS = "patterns"
     TUTORIALS = "tutorials"
+    REFERENCE = "reference"
+    GUIDES = "guides"
+    GENERAL = "general"
 
 
 class ComplexityLevel(str, Enum):
@@ -207,7 +212,9 @@ class RetrievalConfig(BaseModel):
     """Configuration for retrieval operations."""
 
     top_k: int = Field(default=10, ge=1, le=100)
-    similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    similarity_threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0
+    )  # Lowered from 0.7 to 0.3 for better recall
     enable_reranking: bool = True
     rerank_top_k: int = Field(default=5, ge=1, le=20)
     hybrid_search_alpha: float = Field(

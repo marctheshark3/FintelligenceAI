@@ -1,8 +1,9 @@
 """
-Factory functions for creating RAG pipeline instances.
+Factory functions for creating optimized RAG pipeline configurations.
 
-This module provides convenient factory functions for creating RAG pipeline
-instances with different configurations for various use cases.
+This module provides factory functions to create RAG pipelines with different
+optimizations for various use cases like EIP documentation, code repositories,
+and ErgoScript development.
 """
 
 import logging
@@ -59,7 +60,7 @@ def create_default_rag_pipeline(
     # Retrieval configuration
     retrieval_defaults = {
         "top_k": 10,
-        "similarity_threshold": 0.7,
+        "similarity_threshold": 0.3,  # Lowered from 0.7 to 0.3 for better recall
         "enable_reranking": True,
         "rerank_top_k": 5,
     }
@@ -98,48 +99,42 @@ def create_default_rag_pipeline(
     return pipeline
 
 
-def create_ergoscript_pipeline(
-    persist_directory: Optional[str] = None,
-    **kwargs,
-) -> RAGPipeline:
+def create_ergoscript_pipeline(collection_name: str = None) -> RAGPipeline:
     """
-    Create a RAG pipeline optimized for ErgoScript code generation.
+    Create a pipeline specifically optimized for ErgoScript development.
+
+    This pipeline is tuned for:
+    - ErgoScript syntax and semantics
+    - Smart contract development
+    - Ergo Platform specific features
+    - Box model and UTXO handling
+    - Integration with Ergo ecosystem
 
     Args:
-        persist_directory: Directory for vector store persistence
-        **kwargs: Additional configuration overrides
+        collection_name: Name of the collection to use
 
     Returns:
-        RAG pipeline optimized for ErgoScript
+        RAGPipeline configured for ErgoScript development
     """
-    # Override defaults for ErgoScript optimization
-    ergoscript_overrides = {
-        "vector_store": {
-            "collection_name": "ergoscript_knowledge",
-            **kwargs.get("vector_store", {}),
-        },
-        "retrieval": {
-            "top_k": 8,
-            "similarity_threshold": 0.75,
-            "enable_reranking": True,
-            "rerank_top_k": 5,
-            "hybrid_search_alpha": 0.8,  # Favor semantic search for code
-            **kwargs.get("retrieval", {}),
-        },
-        "generation": {
-            "model_name": "gpt-4o-mini",
-            "temperature": 0.1,  # Lower temperature for code generation
-            "max_tokens": 2048,
-            **kwargs.get("generation", {}),
-        },
+    # Use the existing create_default_rag_pipeline with ErgoScript-specific settings
+    ergoscript_retrieval = {
+        "top_k": 15,
+        "similarity_threshold": 0.4,  # Lower for ErgoScript specificity
+        "enable_reranking": True,
+        "rerank_top_k": 12,
+        "hybrid_search_alpha": 0.3,  # Heavy keyword focus
+    }
+
+    ergoscript_generation = {
+        "model_name": "gpt-4",
+        "temperature": 0.05,  # Very low temperature for precise guidance
+        "max_tokens": 2048,
     }
 
     return create_default_rag_pipeline(
-        collection_name=ergoscript_overrides["vector_store"]["collection_name"],
-        persist_directory=persist_directory,
-        embedding_model="text-embedding-3-large",
-        retrieval=ergoscript_overrides["retrieval"],
-        generation=ergoscript_overrides["generation"],
+        collection_name=collection_name or "ergoscript_development",
+        retrieval=ergoscript_retrieval,
+        generation=ergoscript_generation,
     )
 
 
@@ -305,12 +300,135 @@ def get_pipeline_for_environment(
         return create_ergoscript_pipeline(**kwargs)
 
 
+def create_eip_documentation_pipeline(
+    persist_directory: Optional[str] = None,
+    **kwargs,
+) -> RAGPipeline:
+    """
+    Create a RAG pipeline optimized for EIP (Ergo Improvement Proposal) queries.
+
+    Args:
+        persist_directory: Directory for vector store persistence
+        **kwargs: Additional configuration overrides
+
+    Returns:
+        RAG pipeline optimized for EIP documentation
+    """
+    eip_overrides = {
+        "vector_store": {
+            "collection_name": "eip_documentation",
+            **kwargs.get("vector_store", {}),
+        },
+        "retrieval": {
+            "top_k": 15,  # More results for better coverage
+            "similarity_threshold": 0.5,  # Lower threshold for technical docs
+            "enable_reranking": True,
+            "rerank_top_k": 8,
+            "hybrid_search_alpha": 0.5,  # Balance semantic and keyword search
+            **kwargs.get("retrieval", {}),
+        },
+        "generation": {
+            "model_name": "gpt-4o-mini",
+            "temperature": 0.2,  # Slightly higher for explanations
+            "max_tokens": 3072,
+            **kwargs.get("generation", {}),
+        },
+    }
+
+    return create_default_rag_pipeline(
+        collection_name=eip_overrides["vector_store"]["collection_name"],
+        persist_directory=persist_directory,
+        embedding_model="text-embedding-3-large",
+        retrieval=eip_overrides["retrieval"],
+        generation=eip_overrides["generation"],
+    )
+
+
+def create_flexible_documentation_pipeline(
+    collection_name: str = None, query_type: str = "general"
+) -> RAGPipeline:
+    """
+    Create a flexible documentation pipeline that adapts based on query type.
+
+    Args:
+        collection_name: Name of the collection to use
+        query_type: Type of query - "eip", "code", "github", or "general"
+
+    Returns:
+        Configured RAGPipeline optimized for the query type
+    """
+    if query_type == "eip":
+        return create_eip_documentation_pipeline()
+    elif query_type in ["code", "github"]:
+        return create_code_repository_pipeline(collection_name)
+    elif query_type == "ergoscript":
+        return create_ergoscript_pipeline(collection_name)
+    else:
+        return create_default_rag_pipeline(collection_name=collection_name)
+
+
+def create_code_repository_pipeline(collection_name: str = None) -> RAGPipeline:
+    """
+    Create a pipeline optimized for code repository and GitHub content retrieval.
+
+    This pipeline is specifically tuned for:
+    - Code examples and implementations
+    - GitHub repository content
+    - Programming language specific queries
+    - Function/class/method lookups
+    - API documentation in code
+
+    Args:
+        collection_name: Name of the collection to use
+
+    Returns:
+        RAGPipeline configured for code repository retrieval
+    """
+    # Use the existing create_default_rag_pipeline with code-specific settings
+    code_retrieval = {
+        "top_k": 20,  # More results for comprehensive code examples
+        "similarity_threshold": 0.45,  # Lower threshold for code semantic similarity
+        "enable_reranking": True,
+        "rerank_top_k": 15,
+        "hybrid_search_alpha": 0.4,  # Keyword-favored for exact function/class names
+    }
+
+    code_generation = {
+        "model_name": "gpt-4",
+        "temperature": 0.1,  # Low temperature for precise code explanations
+        "max_tokens": 2048,
+    }
+
+    return create_default_rag_pipeline(
+        collection_name=collection_name or "code_repository",
+        retrieval=code_retrieval,
+        generation=code_generation,
+    )
+
+
+def create_default_pipeline(collection_name: str = None) -> RAGPipeline:
+    """
+    Create a default RAG pipeline with standard settings.
+
+    Args:
+        collection_name: Name of the collection to use
+
+    Returns:
+        RAGPipeline with standard configuration
+    """
+    return create_default_rag_pipeline(collection_name=collection_name or "default")
+
+
 # Convenience exports
 __all__ = [
     "create_default_rag_pipeline",
+    "create_default_pipeline",
     "create_ergoscript_pipeline",
     "create_documentation_pipeline",
     "create_development_pipeline",
     "create_production_pipeline",
     "get_pipeline_for_environment",
+    "create_eip_documentation_pipeline",
+    "create_flexible_documentation_pipeline",
+    "create_code_repository_pipeline",
 ]

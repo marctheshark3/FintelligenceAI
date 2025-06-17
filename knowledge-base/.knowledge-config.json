@@ -1,0 +1,29 @@
+{
+  "default_category": "general",
+  "default_difficulty": "intermediate",
+  "file_patterns": {
+    "tutorials": ["*tutorial*", "*guide*", "*howto*", "*learning*"],
+    "examples": ["*example*", "*demo*", "*sample*", "*template*"],
+    "reference": ["*api*", "*ref*", "*spec*", "*docs*"],
+    "guides": ["*best*", "*practice*", "*pattern*", "*style*"]
+  },
+  "auto_categorize": true,
+  "extract_metadata": true,
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "supported_extensions": [".md", ".pdf", ".txt", ".docx", ".py", ".es", ".js", ".json", ".csv", ".html"],
+  "exclude_patterns": ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**"],
+  "github": {
+    "include_readme": true,
+    "include_docs": true,
+    "include_examples": true,
+    "max_file_size_mb": 10,
+    "clone_depth": 1
+  },
+  "web_scraping": {
+    "max_depth": 2,
+    "follow_links": false,
+    "timeout_seconds": 30,
+    "user_agent": "FintelligenceAI Knowledge Collector"
+  }
+}

@@ -7,6 +7,7 @@ semantic search, keyword search, and hybrid retrieval strategies.
 
 import logging
 import re
+import time
 from typing import Any, Optional, Union
 
 import dspy
@@ -15,6 +16,13 @@ from rank_bm25 import BM25Okapi
 from .embeddings import EmbeddingService
 from .models import Document, Query, QueryIntent, RetrievalConfig, RetrievalResult
 from .vectorstore import VectorStoreManager
+
+
+class RetrievalError(Exception):
+    """Exception raised when retrieval operations fail."""
+
+    pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -121,33 +129,62 @@ class RetrievalEngine:
 
         logger.info("Initialized RetrievalEngine")
 
-    def retrieve(
-        self,
-        query: Query,
-        strategy: str = "semantic",
-        filters: Optional[dict[str, Any]] = None,
-    ) -> list[RetrievalResult]:
+    async def retrieve(self, query: Query) -> list[RetrievalResult]:
         """
-        Retrieve documents using the specified strategy.
+        Retrieve relevant documents for the given query.
 
         Args:
-            query: Query object with text and parameters
-            strategy: Retrieval strategy ("semantic", "keyword", "hybrid")
-            filters: Optional metadata filters
+            query: Query object containing the search text
 
         Returns:
-            List of retrieval results ranked by relevance
+            List of relevant documents ranked by relevance
         """
-        logger.debug(f"Retrieving documents with strategy: {strategy}")
+        start_time = time.time()
 
-        if strategy == "semantic":
-            return self._semantic_retrieval(query, filters)
-        elif strategy == "keyword":
-            return self._keyword_retrieval(query, filters)
-        elif strategy == "hybrid":
-            return self._hybrid_retrieval(query, filters)
-        else:
-            raise ValueError(f"Unknown retrieval strategy: {strategy}")
+        try:
+            # Enhanced query intent detection with priority order
+            if self._is_eip_query(query.text):
+                logger.info(
+                    f"Detected EIP query, using specialized EIP retrieval: {query.text[:100]}..."
+                )
+                results = self._retrieve_eip_documents(query)
+                query_type = "eip"
+            elif self._is_ergoscript_query(query.text):
+                logger.info(
+                    f"Detected ErgoScript query, using specialized ErgoScript retrieval: {query.text[:100]}..."
+                )
+                results = self._retrieve_ergoscript_documents(query)
+                query_type = "ergoscript"
+            elif self._is_code_query(query.text):
+                logger.info(
+                    f"Detected code query, using specialized code retrieval: {query.text[:100]}..."
+                )
+                results = self._retrieve_code_documents(query)
+                query_type = "code"
+            else:
+                logger.info(f"Using general retrieval for query: {query.text[:100]}...")
+                results = self._general_retrieval(query)
+                query_type = "general"
+
+            # Apply reranking if enabled and we have multiple results
+            if self.config.enable_reranking and len(results) > 1:
+                logger.debug(f"Applying reranking to {len(results)} results")
+                results = await self._rerank_results(query, results)
+
+            # Final limit to configured top_k
+            final_results = results[: self.config.top_k]
+
+            retrieval_time = time.time() - start_time
+            logger.info(
+                f"Retrieved {len(final_results)} documents in {retrieval_time:.3f}s "
+                f"(query_type: {query_type}, total_candidates: {len(results)})"
+            )
+
+            return final_results
+
+        except Exception as e:
+            logger.error(f"Error during retrieval: {e}")
+            raise RetrievalError(f"Failed to retrieve documents: {e}") from e
 
     def retrieve_with_intent(
         self,
@@ -165,6 +202,10 @@ class RetrievalEngine:
             List of retrieval results optimized for the intent
         """
         intent = intent or query.intent or self._detect_intent(query.text)
+
+        # Check for EIP-specific queries and handle specially
+        if self._is_eip_query(query.text):
+            return self._retrieve_eip_documents(query)
 
         # Adjust retrieval strategy based on intent
         if intent == QueryIntent.CODE_GENERATION:
@@ -188,7 +229,13 @@ class RetrievalEngine:
             filters = None
             strategy = "hybrid"
 
-        results = self.retrieve(query, strategy, filters)
+        # Use appropriate retrieval method based on strategy
+        if strategy == "semantic":
+            results = self._semantic_retrieval(query, filters)
+        elif strategy == "keyword":
+            results = self._keyword_retrieval(query, filters)
+        else:  # hybrid
+            results = self._hybrid_retrieval(query, filters)
 
         # Apply intent-specific post-processing
         return self._post_process_by_intent(results, intent)
@@ -414,49 +461,627 @@ class RetrievalEngine:
         """
         query_lower = query_text.lower()
 
-        # Code generation keywords
+        # EIP and standards queries
         if any(
-            keyword in query_lower
-            for keyword in ["generate", "create", "write", "implement", "build", "code"]
-        ):
-            return QueryIntent.CODE_GENERATION
-
-        # Documentation keywords
-        elif any(
-            keyword in query_lower
-            for keyword in ["how to", "documentation", "guide", "manual", "reference"]
+            pattern in query_lower
+            for pattern in [
+                "eip",
+                "improvement proposal",
+                "standard",
+                "token standard",
+                "nft standard",
+                "eip-",
+                "eip ",
+                "what is the eip",
+            ]
         ):
             return QueryIntent.DOCUMENTATION
 
-        # Example keywords
-        elif any(
-            keyword in query_lower
-            for keyword in ["example", "sample", "demo", "show me", "tutorial"]
+        # Code generation patterns
+        if any(
+            pattern in query_lower
+            for pattern in [
+                "create",
+                "generate",
+                "write",
+                "implement",
+                "build",
+                "contract",
+                "smart contract",
+                "ergoscript",
+            ]
+        ):
+            return QueryIntent.CODE_GENERATION
+
+        # Examples and tutorials
+        if any(
+            pattern in query_lower
+            for pattern in ["example", "tutorial", "how to", "show me", "demo"]
         ):
             return QueryIntent.EXAMPLES
 
-        # Best practices keywords
-        elif any(
-            keyword in query_lower
-            for keyword in [
+        # Best practices
+        if any(
+            pattern in query_lower
+            for pattern in [
                 "best practice",
-                "recommended",
-                "should",
+                "recommend",
+                "should i",
                 "pattern",
-                "convention",
+                "security",
+                "optimize",
             ]
         ):
             return QueryIntent.BEST_PRACTICES
 
-        # Debugging keywords
-        elif any(
-            keyword in query_lower
-            for keyword in ["error", "debug", "fix", "problem", "issue", "troubleshoot"]
+        # Documentation queries
+        if any(
+            pattern in query_lower
+            for pattern in [
+                "what is",
+                "explain",
+                "describe",
+                "definition",
+                "documentation",
+                "api",
+                "reference",
+            ]
         ):
-            return QueryIntent.DEBUGGING
+            return QueryIntent.DOCUMENTATION
 
-        # Default to documentation
+        # Default to general
         return QueryIntent.DOCUMENTATION
+
+    def _is_eip_query(self, query_text: str) -> bool:
+        """
+        Determine if a query is specifically asking about EIPs.
+
+        Args:
+            query_text: The user's query string
+
+        Returns:
+            True if the query appears to be EIP-related
+        """
+        query_lower = query_text.lower()
+
+        # Direct EIP indicators
+        eip_indicators = [
+            "eip",
+            "eip-",
+            "improvement proposal",
+            "ergo improvement",
+            "standard",
+            "specification",
+            "protocol",
+        ]
+
+        # EIP-specific terms
+        eip_terms = [
+            "token standard",
+            "collection",
+            "nft standard",
+            "wallet api",
+            "stealth address",
+            "payment request",
+            "asset standard",
+        ]
+
+        # Check for direct indicators
+        for indicator in eip_indicators:
+            if indicator in query_lower:
+                return True
+
+        # Check for EIP-specific terms combined with question words
+        question_words = ["what", "which", "how", "explain", "describe", "define"]
+        if any(qw in query_lower for qw in question_words):
+            if any(term in query_lower for term in eip_terms):
+                return True
+
+        return False
+
+    def _is_code_query(self, query: str) -> bool:
+        """
+        Determine if a query is specifically asking about code, implementation, or GitHub content.
+
+        Args:
+            query: The user's query string
+
+        Returns:
+            True if the query appears to be code/GitHub-related
+        """
+        query_lower = query.lower()
+
+        # Code implementation indicators
+        code_indicators = [
+            "implement",
+            "implementation",
+            "code",
+            "function",
+            "method",
+            "class",
+            "api",
+            "library",
+            "framework",
+            "package",
+            "module",
+            "import",
+            "github",
+            "repository",
+            "repo",
+            "source",
+            "example",
+            "sample",
+        ]
+
+        # Programming language indicators
+        language_indicators = [
+            "python",
+            "javascript",
+            "js",
+            "ergoscript",
+            "scala",
+            "java",
+            "typescript",
+            "react",
+            "node",
+            "npm",
+            "pip",
+            "cargo",
+        ]
+
+        # Development/technical terms
+        dev_terms = [
+            "debug",
+            "error",
+            "bug",
+            "compile",
+            "build",
+            "test",
+            "unit test",
+            "integration",
+            "deployment",
+            "configuration",
+            "setup",
+            "install",
+            "dependency",
+            "version",
+            "update",
+            "documentation",
+            "docs",
+            "tutorial",
+            "guide",
+            "how to",
+            "step by step",
+        ]
+
+        # Ergo-specific development terms
+        ergo_dev_terms = [
+            "box",
+            "utxo",
+            "transaction",
+            "smart contract",
+            "dapp",
+            "appkit",
+            "sigma",
+            "sigmastate",
+            "prover",
+            "verifier",
+            "address",
+            "wallet",
+        ]
+
+        # Check for direct code indicators
+        for indicator in code_indicators:
+            if indicator in query_lower:
+                return True
+
+        # Check for programming language mentions
+        for lang in language_indicators:
+            if lang in query_lower:
+                return True
+
+        # Check for development terms with question context
+        question_words = ["how", "what", "where", "when", "why", "show", "demonstrate"]
+        if any(qw in query_lower for qw in question_words):
+            if any(term in query_lower for term in dev_terms + ergo_dev_terms):
+                return True
+
+        return False
+
+    def _is_ergoscript_query(self, query: str) -> bool:
+        """
+        Determine if a query is specifically about ErgoScript development.
+
+        Args:
+            query: The user's query string
+
+        Returns:
+            True if the query appears to be ErgoScript-specific
+        """
+        query_lower = query.lower()
+
+        # ErgoScript specific indicators
+        ergoscript_indicators = [
+            "ergoscript",
+            "ergo script",
+            "sigma",
+            "sigmastate",
+            "sigmaprop",
+            "box",
+            "utxo",
+            "registers",
+            "context",
+            "self",
+            "inputs",
+            "outputs",
+        ]
+
+        # ErgoScript functions and operations
+        ergoscript_functions = [
+            "alltrue",
+            "anytrue",
+            "blake2b256",
+            "deserialize",
+            "serialize",
+            "provelog",
+            "proveddlog",
+            "getvar",
+            "extract",
+            "fold",
+            "forall",
+            "exists",
+            "atmost",
+            "byteand",
+            "byteor",
+            "bytexor",
+        ]
+
+        # Smart contract terms
+        contract_terms = [
+            "smart contract",
+            "contract",
+            "guard script",
+            "spending condition",
+            "emission",
+            "token minting",
+            "burning",
+            "oracle",
+            "pool",
+        ]
+
+        # Check for ErgoScript indicators
+        for indicator in ergoscript_indicators:
+            if indicator in query_lower:
+                return True
+
+        # Check for ErgoScript functions
+        for func in ergoscript_functions:
+            if func in query_lower:
+                return True
+
+        # Check for smart contract terms
+        for term in contract_terms:
+            if term in query_lower:
+                return True
+
+        return False
+
+    def _retrieve_eip_documents(self, query: Query) -> list[RetrievalResult]:
+        """
+        Retrieve documents with EIP-optimized settings.
+
+        Args:
+            query: The query object
+
+        Returns:
+            List of retrieval results optimized for EIP content
+        """
+        # Use more lenient similarity threshold for technical documentation
+        results = self.vector_store.similarity_search(
+            query_text=query.text,
+            k=15,  # Get more results initially
+            similarity_threshold=0.45,  # Lower threshold for EIP docs
+            alpha=0.4,  # Keyword-favored search for EIP terms
+        )
+
+        # Post-process to boost EIP-relevant results
+        processed_results = self._post_process_eip_results(results, query.text)
+
+        # Re-rank and limit results
+        return processed_results[: self.config.top_k]
+
+    def _retrieve_code_documents(self, query: Query) -> list[RetrievalResult]:
+        """
+        Retrieve documents with code/GitHub-optimized settings.
+
+        Args:
+            query: The query object
+
+        Returns:
+            List of retrieval results optimized for code content
+        """
+        # Use code-optimized similarity threshold
+        results = self.vector_store.similarity_search(
+            query_text=query.text,
+            k=20,  # Get more results for comprehensive code examples
+            similarity_threshold=0.45,  # Lower threshold for code semantic similarity
+            alpha=0.4,  # Keyword-favored for exact function/class names
+        )
+
+        # Post-process to boost code-relevant results
+        processed_results = self._post_process_code_results(results, query.text)
+
+        # Re-rank and limit results
+        return processed_results[: self.config.top_k]
+
+    def _retrieve_ergoscript_documents(self, query: Query) -> list[RetrievalResult]:
+        """
+        Retrieve documents with ErgoScript-optimized settings.
+
+        Args:
+            query: The query object
+
+        Returns:
+            List of retrieval results optimized for ErgoScript content
+        """
+        # Use ErgoScript-optimized similarity threshold
+        results = self.vector_store.similarity_search(
+            query_text=query.text,
+            k=15,  # Focused results for ErgoScript
+            similarity_threshold=0.4,  # Even lower for ErgoScript specificity
+            alpha=0.3,  # Heavy keyword focus for ErgoScript terms
+        )
+
+        # Post-process to boost ErgoScript-relevant results
+        processed_results = self._post_process_ergoscript_results(results, query.text)
+
+        # Re-rank and limit results
+        return processed_results[: self.config.top_k]
+
+    def _post_process_eip_results(
+        self, results: list[RetrievalResult], query_text: str
+    ) -> list[RetrievalResult]:
+        """
+        Post-process results to boost EIP-relevant content.
+
+        Args:
+            results: Raw retrieval results
+            query_text: Original query text
+
+        Returns:
+            Processed and re-ranked results for EIP queries
+        """
+        query_lower = query_text.lower()
+
+        # Boost scores for documents that appear to be EIP-related
+        for result in results:
+            content_lower = result.content.lower()
+            title_lower = (result.title or "").lower()
+
+            # Major boost for documents that contain EIP indicators
+            eip_indicators = [
+                "eip-",
+                "improvement proposal",
+                "ergo improvement",
+                "standard",
+                "specification",
+            ]
+            if any(
+                indicator in content_lower or indicator in title_lower
+                for indicator in eip_indicators
+            ):
+                result.score = min(1.0, result.score * 1.4)
+
+            # Additional boost for EIP-specific terms that match the query
+            eip_terms = [
+                "token",
+                "collection",
+                "nft",
+                "wallet",
+                "api",
+                "stealth",
+                "address",
+                "payment",
+                "request",
+                "asset",
+            ]
+            matching_terms = sum(
+                1 for term in eip_terms if term in query_lower and term in content_lower
+            )
+
+            if matching_terms > 0:
+                boost_factor = 1.0 + (matching_terms * 0.15)
+                result.score = min(1.0, result.score * boost_factor)
+
+        # Re-sort by adjusted scores
+        results.sort(key=lambda x: x.score, reverse=True)
+
+        # Update ranks
+        for i, result in enumerate(results):
+            result.rank = i + 1
+
+        return results
+
+    def _post_process_code_results(
+        self, results: list[RetrievalResult], query_text: str
+    ) -> list[RetrievalResult]:
+        """
+        Post-process results for code queries.
+
+        Args:
+            results: Raw retrieval results
+            query_text: Original query text
+
+        Returns:
+            Processed and re-ranked results for code queries
+        """
+        query_lower = query_text.lower()
+
+        # Boost scores for documents that appear to be code-related
+        for result in results:
+            content_lower = result.content.lower()
+            title_lower = (result.title or "").lower()
+
+            # Boost if content contains code indicators
+            code_indicators = [
+                "code",
+                "function",
+                "method",
+                "class",
+                "api",
+                "library",
+                "framework",
+                "package",
+                "module",
+                "import",
+                "github",
+                "repository",
+                "repo",
+                "source",
+                "example",
+                "sample",
+            ]
+            if any(
+                indicator in content_lower or indicator in title_lower
+                for indicator in code_indicators
+            ):
+                result.score = min(1.0, result.score * 1.3)
+
+            # Boost if content contains programming language terms
+            lang_terms = [
+                "python",
+                "javascript",
+                "js",
+                "ergoscript",
+                "scala",
+                "java",
+                "typescript",
+                "react",
+                "node",
+                "npm",
+                "pip",
+                "cargo",
+            ]
+            matching_terms = sum(
+                1
+                for term in lang_terms
+                if term in query_lower and term in content_lower
+            )
+
+            if matching_terms > 0:
+                boost_factor = 1.0 + (matching_terms * 0.1)
+                result.score = min(1.0, result.score * boost_factor)
+
+        # Re-sort by adjusted scores
+        results.sort(key=lambda x: x.score, reverse=True)
+
+        # Update ranks
+        for i, result in enumerate(results):
+            result.rank = i + 1
+
+        return results
+
+    def _post_process_ergoscript_results(
+        self, results: list[RetrievalResult], query_text: str
+    ) -> list[RetrievalResult]:
+        """
+        Post-process results for ErgoScript queries.
+
+        Args:
+            results: Raw retrieval results
+            query_text: Original query text
+
+        Returns:
+            Processed and re-ranked results for ErgoScript queries
+        """
+        query_lower = query_text.lower()
+
+        # Boost scores for documents that appear to be ErgoScript-related
+        for result in results:
+            content_lower = result.content.lower()
+            title_lower = (result.title or "").lower()
+
+            # Boost if content contains ErgoScript indicators
+            ergoscript_indicators = [
+                "ergoscript",
+                "ergo script",
+                "sigma",
+                "sigmastate",
+                "sigmaprop",
+                "box",
+                "utxo",
+                "registers",
+                "context",
+                "self",
+                "inputs",
+                "outputs",
+            ]
+            if any(
+                indicator in content_lower or indicator in title_lower
+                for indicator in ergoscript_indicators
+            ):
+                result.score = min(1.0, result.score * 1.3)
+
+            # Boost if content contains ErgoScript function terms
+            func_terms = [
+                "alltrue",
+                "anytrue",
+                "blake2b256",
+                "deserialize",
+                "serialize",
+                "provelog",
+                "proveddlog",
+                "getvar",
+                "extract",
+                "fold",
+                "forall",
+                "exists",
+                "atmost",
+                "byteand",
+                "byteor",
+                "bytexor",
+            ]
+            matching_terms = sum(
+                1
+                for term in func_terms
+                if term in query_lower and term in content_lower
+            )
+
+            if matching_terms > 0:
+                boost_factor = 1.0 + (matching_terms * 0.15)
+                result.score = min(1.0, result.score * boost_factor)
+
+        # Re-sort by adjusted scores
+        results.sort(key=lambda x: x.score, reverse=True)
+
+        # Update ranks
+        for i, result in enumerate(results):
+            result.rank = i + 1
+
+        return results
+
+    def _post_process_general_results(
+        self, results: list[RetrievalResult], query_text: str
+    ) -> list[RetrievalResult]:
+        """
+        Post-process results for general queries.
+
+        Args:
+            results: Raw retrieval results
+            query_text: Original query text
+
+        Returns:
+            Processed results for general queries
+        """
+        # For general queries, we apply minimal processing
+        # Just ensure proper ranking is maintained
+        results.sort(key=lambda x: x.score, reverse=True)
+
+        # Update ranks
+        for i, result in enumerate(results):
+            result.rank = i + 1
+
+        return results
 
     def _post_process_by_intent(
         self,
@@ -487,3 +1112,26 @@ class RetrievalEngine:
             )
 
         return results
+
+    def _general_retrieval(self, query: Query) -> list[RetrievalResult]:
+        """
+        General retrieval method for non-specialized queries.
+
+        Args:
+            query: The query object
+
+        Returns:
+            List of retrieval results using standard settings
+        """
+        # Use standard similarity search with current config
+        results = self.vector_store.similarity_search(
+            query_text=query.text,
+            k=self.config.top_k * 2,  # Get more results initially
+            similarity_threshold=self.config.similarity_threshold,
+            alpha=0.6,  # Balanced search for general queries
+        )
+
+        # Apply general post-processing
+        processed_results = self._post_process_general_results(results, query.text)
+
+        return processed_results

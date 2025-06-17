@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Import API routers
 from fintelligence_ai.api.agents import router as agents_router
+from fintelligence_ai.api.knowledge import router as knowledge_router
 from fintelligence_ai.api.optimization import router as optimization_router
 from fintelligence_ai.config import get_settings
 
@@ -25,10 +26,49 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 FintelligenceAI starting up...")
 
-    # Configure DSPy with OpenAI
+    # Configure DSPy with appropriate provider
     settings = get_settings()
-    if settings.openai.api_key:
-        try:
+
+    try:
+        if settings.dspy.local_mode or settings.dspy.model_provider == "ollama":
+            # Configure DSPy with Ollama using standard DSPy LM interface
+            try:
+                # First check if Ollama server is available
+                import httpx
+
+                response = httpx.get(f"{settings.ollama.url}/api/tags", timeout=5.0)
+                if response.status_code != 200:
+                    raise ConnectionError(
+                        f"Ollama server not available at {settings.ollama.url}"
+                    )
+
+                # Use standard DSPy LM with Ollama endpoint
+                lm = dspy.LM(
+                    model=f"ollama/{settings.ollama.model}",
+                    api_base=settings.ollama.url,
+                    temperature=settings.ollama.temperature,
+                    max_tokens=settings.ollama.max_tokens,
+                )
+                dspy.configure(lm=lm)
+                print(
+                    f"✅ DSPy configured with Ollama (Local) - Model: {settings.ollama.model}"
+                )
+                print(f"   Server: {settings.ollama.url}")
+
+            except Exception as e:
+                # Fallback to custom Ollama implementation if standard doesn't work
+                print(f"⚠️ Standard Ollama DSPy configuration failed: {e}")
+                print("   Trying custom Ollama implementation...")
+                from fintelligence_ai.core.ollama import get_ollama_dspy_model
+
+                lm = get_ollama_dspy_model()
+                dspy.configure(lm=lm)
+                print(
+                    f"✅ DSPy configured with Ollama (Custom) - Model: {settings.ollama.model}"
+                )
+                print(f"   Server: {settings.ollama.url}")
+
+        elif settings.openai.api_key and (not settings.dspy.local_mode):
             # Configure DSPy with OpenAI language model (using newer DSPy API)
             lm = dspy.LM(
                 model=f"openai/{settings.openai.model}",
@@ -37,11 +77,20 @@ async def lifespan(app: FastAPI):
                 max_tokens=settings.openai.max_tokens,
             )
             dspy.configure(lm=lm)
-            print(f"✅ DSPy configured with OpenAI model: {settings.openai.model}")
-        except Exception as e:
-            print(f"⚠️ Failed to configure DSPy with OpenAI: {e}")
-    else:
-        print("⚠️ OpenAI API key not found - DSPy will not be configured")
+            print(f"✅ DSPy configured with OpenAI - Model: {settings.openai.model}")
+
+        else:
+            if settings.dspy.local_mode:
+                print("⚠️ Local mode enabled but Ollama server not available")
+            else:
+                print(
+                    "⚠️ OpenAI API key not found and local mode disabled - DSPy will not be configured"
+                )
+
+    except Exception as e:
+        print(f"⚠️ Failed to configure DSPy: {e}")
+        print(f"   Provider: {settings.dspy.model_provider}")
+        print(f"   Local Mode: {settings.dspy.local_mode}")
 
     yield
     # Shutdown
@@ -71,6 +120,7 @@ def create_app() -> FastAPI:
 
     # Include API routers
     app.include_router(agents_router)
+    app.include_router(knowledge_router)
     app.include_router(optimization_router)
 
     return app

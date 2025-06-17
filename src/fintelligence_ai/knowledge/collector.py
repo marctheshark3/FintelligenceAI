@@ -4,8 +4,12 @@ Data Collection Module
 Collects ErgoScript examples and documentation from various sources.
 """
 
+import asyncio
 import logging
+import os
 import re
+import time
+from functools import wraps
 from pathlib import Path
 from typing import Optional
 
@@ -19,6 +23,57 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+def rate_limit(calls_per_hour: int = 5000):
+    """Decorator to enforce rate limiting on GitHub API calls."""
+    min_interval = 3600 / calls_per_hour  # Minimum interval between calls in seconds
+
+    def decorator(func):
+        last_called = [0.0]
+
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Calculate time since last call
+            now = time.time()
+            time_passed = now - last_called[0]
+
+            # If we need to wait, do so
+            if time_passed < min_interval:
+                wait_time = min_interval - time_passed
+                logger.debug(f"Rate limiting: waiting {wait_time:.2f} seconds")
+                await asyncio.sleep(wait_time)
+
+            last_called[0] = time.time()
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+async def retry_with_exponential_backoff(
+    func, max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 60.0
+):
+    """Retry function with exponential backoff for rate limit errors."""
+    for attempt in range(max_retries + 1):
+        try:
+            return await func()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403 and "rate limit" in str(e).lower():
+                if attempt == max_retries:
+                    logger.error(f"Max retries ({max_retries}) exceeded for rate limit")
+                    raise
+
+                delay = min(base_delay * (2**attempt), max_delay)
+                logger.warning(
+                    f"Rate limit hit, retrying in {delay:.2f} seconds (attempt {attempt + 1}/{max_retries + 1})"
+                )
+                await asyncio.sleep(delay)
+            else:
+                raise
+        except Exception:
+            raise
+
+
 class GitHubFile(BaseModel):
     """Represents a file from GitHub repository."""
 
@@ -30,21 +85,69 @@ class GitHubFile(BaseModel):
 
 
 class GitHubDataCollector:
-    """Collects data from GitHub repositories."""
+    """Collects data from GitHub repositories with rate limiting and authentication."""
 
     def __init__(self):
         self.session: Optional[httpx.AsyncClient] = None
         self.base_url = "https://api.github.com"
+        self.github_token = os.getenv("GITHUB_TOKEN") or os.getenv("GITHUB_API_KEY")
+
+        # Set rate limits based on authentication
+        if self.github_token:
+            self.rate_limit_per_hour = 5000  # Authenticated
+            logger.info("Using authenticated GitHub API requests (5,000 requests/hour)")
+        else:
+            self.rate_limit_per_hour = 60  # Unauthenticated
+            logger.warning(
+                "Using unauthenticated GitHub API requests (60 requests/hour). Consider setting GITHUB_TOKEN for higher limits."
+            )
 
     async def __aenter__(self):
-        self.session = httpx.AsyncClient(
-            timeout=30.0, headers={"Accept": "application/vnd.github.v3+json"}
-        )
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "FintelligenceAI-KnowledgeCollector/1.0",
+        }
+
+        # Add authentication if token is available
+        if self.github_token:
+            headers["Authorization"] = f"token {self.github_token}"
+
+        self.session = httpx.AsyncClient(timeout=30.0, headers=headers)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             await self.session.aclose()
+
+    async def _make_api_request(self, url: str) -> httpx.Response:
+        """Make a rate-limited API request with retry logic."""
+        if not self.session:
+            raise RuntimeError(
+                "GitHubDataCollector must be used as async context manager"
+            )
+
+        # Apply rate limiting based on authentication status
+        if not hasattr(self, "_last_request_time"):
+            self._last_request_time = 0.0
+
+        # Calculate minimum interval between requests
+        min_interval = 3600 / self.rate_limit_per_hour
+        now = time.time()
+        time_since_last = now - self._last_request_time
+
+        if time_since_last < min_interval:
+            wait_time = min_interval - time_since_last
+            logger.debug(f"Rate limiting: waiting {wait_time:.2f} seconds")
+            await asyncio.sleep(wait_time)
+
+        async def _request():
+            response = await self.session.get(url)
+            response.raise_for_status()
+            return response
+
+        result = await retry_with_exponential_backoff(_request)
+        self._last_request_time = time.time()
+        return result
 
     async def get_repository_files(
         self,
@@ -53,17 +156,10 @@ class GitHubDataCollector:
         path: str = "",
         file_extensions: Optional[set[str]] = None,
     ) -> list[GitHubFile]:
-        """Get files from a GitHub repository."""
-        if not self.session:
-            raise RuntimeError(
-                "GitHubDataCollector must be used as async context manager"
-            )
-
+        """Get files from a GitHub repository with rate limiting."""
         try:
             url = f"{self.base_url}/repos/{owner}/{repo}/contents/{path}"
-            response = await self.session.get(url)
-            response.raise_for_status()
-
+            response = await self._make_api_request(url)
             contents = response.json()
             files = []
 
@@ -89,6 +185,8 @@ class GitHubDataCollector:
                     )
                 elif item["type"] == "dir":
                     # Recursively get files from subdirectories
+                    # Add small delay to avoid overwhelming API
+                    await asyncio.sleep(0.1)
                     subdir_files = await self.get_repository_files(
                         owner, repo, item["path"], file_extensions
                     )
@@ -108,12 +206,23 @@ class GitHubDataCollector:
             )
 
         try:
+            # Use the download_url which doesn't count against API rate limits
             response = await self.session.get(file.download_url)
             response.raise_for_status()
             return response.text
         except Exception as e:
             logger.error(f"Error downloading file {file.name}: {e}")
             return ""
+
+    async def check_rate_limit_status(self) -> dict:
+        """Check current rate limit status."""
+        try:
+            url = f"{self.base_url}/rate_limit"
+            response = await self._make_api_request(url)
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error checking rate limit status: {e}")
+            return {}
 
 
 class ErgoScriptCollector:

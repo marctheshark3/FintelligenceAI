@@ -1,0 +1,14 @@
+# Add GitHub repositories to ingest, one per line
+# Supported formats:
+# https://github.com/ergoplatform/ergoscript-examples
+# ergoplatform/eips
+# Examples:
+# ergoplatform/ergoscript-by-example
+# ergoplatform/sigma-rust
+
+# Note: GitHub repos commented out to avoid rate limiting
+# Uncomment and use with GitHub token for better access
+https://github.com/ergo-pad/ergo-python-appkit
+https://github.com/ergoplatform/eips
+https://github.com/ergoplatform/ergoscript-by-example
+https://github.com/mgpai22/phoenix-hodlcoin-contracts/tree/main

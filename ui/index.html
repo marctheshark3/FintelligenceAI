@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FintelligenceAI - Agent Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .content {
+            background: white;
+            border-radius: 0 0 10px 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .response-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .code-block {
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .response-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .response-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .response-item h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border-color: #f56565;
+            color: #c53030;
+        }
+
+        .success {
+            background: #f0fff4;
+            border-color: #68d391;
+            color: #2f855a;
+        }
+
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .api-status.online {
+            background: #f0fff4;
+            color: #2f855a;
+            border: 1px solid #68d391;
+        }
+
+        .api-status.offline {
+            background: #fee;
+            color: #c53030;
+            border: 1px solid #f56565;
+        }
+
+        .helper-text {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .list-input {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .list-input input {
+            margin-bottom: 5px;
+        }
+
+        .add-item {
+            background: #e9ecef;
+            color: #333;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+    <div class="api-status" id="apiStatus">
+        <i class="fas fa-circle"></i> Checking API...
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-robot"></i> FintelligenceAI</h1>
+            <p>Intelligent RAG Pipeline & AI Agent System for Code Generation</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('generate')" data-tab="generate">
+                <i class="fas fa-code"></i> Generate Code
+            </button>
+            <button class="tab" onclick="switchTab('research')" data-tab="research">
+                <i class="fas fa-search"></i> Research
+            </button>
+            <button class="tab" onclick="switchTab('validate')" data-tab="validate">
+                <i class="fas fa-check-circle"></i> Validate Code
+            </button>
+            <button class="tab" onclick="switchTab('knowledge')" data-tab="knowledge">
+                <i class="fas fa-database"></i> Knowledge Base
+            </button>
+            <button class="tab" onclick="switchTab('status')" data-tab="status">
+                <i class="fas fa-heartbeat"></i> Agent Status
+            </button>
+        </div>
+
+        <div class="content">
+            <!-- Code Generation Tab -->
+            <div id="generate" class="tab-content active">
+                <h2><i class="fas fa-code"></i> Smart Code Generation</h2>
+                <form id="generateForm">
+                    <div class="form-group">
+                        <label for="description">Description *</label>
+                        <textarea id="description" name="description" placeholder="Describe what you want the code to do..." required></textarea>
+                        <div class="helper-text">Provide a detailed description of the functionality you need</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="codeCategory">Reference Category (Optional)</label>
+                        <input type="text" id="codeCategory" name="category" list="codeCategoryOptions" placeholder="Use knowledge from specific category">
+                        <datalist id="codeCategoryOptions">
+                            <option value="">All Categories</option>
+                            <option value="documents">General Documents</option>
+                            <option value="tutorials">Tutorials</option>
+                            <option value="guides">Guides</option>
+                            <option value="examples">Code Examples</option>
+                            <option value="reference">Reference Materials</option>
+                            <option value="api">API Documentation</option>
+                            <option value="blockchain">Blockchain</option>
+                            <option value="ergoscript">ErgoScript</option>
+                            <option value="smart-contracts">Smart Contracts</option>
+                            <option value="defi">DeFi</option>
+                        </datalist>
+                        <div class="helper-text">Optionally reference knowledge from a specific category for code generation</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="useCase">Use Case</label>
+                            <select id="useCase" name="use_case">
+                                <option value="">Select use case...</option>
+                                <option value="web_app">Web Application</option>
+                                <option value="api">API Development</option>
+                                <option value="data_processing">Data Processing</option>
+                                <option value="automation">Automation Script</option>
+                                <option value="blockchain">Blockchain Contract</option>
+                                <option value="ml_ai">Machine Learning/AI</option>
+                                <option value="database">Database Operations</option>
+                                <option value="integration">System Integration</option>
+                                <option value="mobile">Mobile Application</option>
+                                <option value="testing">Testing Framework</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="complexity">Complexity Level</label>
+                            <select id="complexity" name="complexity_level">
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate" selected>Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="requirements">Requirements</label>
+                        <div id="requirementsList" class="list-input">
+                            <input type="text" placeholder="Add a requirement..." onkeypress="addListItem(event, 'requirements')">
+                        </div>
+                        <button type="button" class="btn add-item" onclick="addRequirement()">
+                            <i class="fas fa-plus"></i> Add Requirement
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="constraints">Constraints</label>
+                        <div id="constraintsList" class="list-input">
+                            <input type="text" placeholder="Add a constraint..." onkeypress="addListItem(event, 'constraints')">
+                        </div>
+                        <button type="button" class="btn add-item" onclick="addConstraint()">
+                            <i class="fas fa-plus"></i> Add Constraint
+                        </button>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-magic"></i> Generate Code
+                    </button>
+                    <button type="button" class="btn add-item" onclick="fillSampleCodeGeneration()" style="margin-left: 10px;">
+                        <i class="fas fa-flask"></i> Fill Sample Data
+                    </button>
+                </form>
+
+                <div class="loading" id="generateLoading">
+                    <div class="spinner"></div>
+                    <p>Generating code...</p>
+                </div>
+
+                <div id="generateResponse" class="response-section" style="display: none;">
+                    <h3><i class="fas fa-code"></i> Generated Code</h3>
+                    <div id="generateContent"></div>
+                </div>
+            </div>
+
+            <!-- Research Tab -->
+            <div id="research" class="tab-content">
+                <h2><i class="fas fa-search"></i> Research Query</h2>
+                <form id="researchForm">
+                    <div class="form-group">
+                        <label for="researchQuery">Research Query *</label>
+                        <textarea id="researchQuery" name="query" placeholder="What would you like to research about programming, development patterns, or specific technologies?" required></textarea>
+                        <div class="helper-text">Ask about programming languages, frameworks, design patterns, best practices, or specific implementation approaches</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="researchCategory">Focus Category (Optional)</label>
+                        <input type="text" id="researchCategory" name="category" list="researchCategoryOptions" placeholder="Filter research to specific category">
+                        <datalist id="researchCategoryOptions">
+                            <option value="">All Categories</option>
+                            <option value="documents">General Documents</option>
+                            <option value="tutorials">Tutorials</option>
+                            <option value="guides">Guides</option>
+                            <option value="examples">Code Examples</option>
+                            <option value="reference">Reference Materials</option>
+                            <option value="api">API Documentation</option>
+                            <option value="blockchain">Blockchain</option>
+                            <option value="ergoscript">ErgoScript</option>
+                            <option value="smart-contracts">Smart Contracts</option>
+                            <option value="defi">DeFi</option>
+                        </datalist>
+                        <div class="helper-text">Optionally focus research on documents from a specific category</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="researchScope">Scope</label>
+                            <select id="researchScope" name="scope">
+                                <option value="general">General Development</option>
+                                <option value="blockchain">Blockchain & Smart Contracts</option>
+                                <option value="web">Web Development</option>
+                                <option value="mobile">Mobile Development</option>
+                                <option value="data">Data Science & ML</option>
+                                <option value="devops">DevOps & Infrastructure</option>
+                                <option value="security">Security</option>
+                                <option value="testing">Testing & QA</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="includeExamples">Include Examples</label>
+                            <select id="includeExamples" name="include_examples">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-search"></i> Research
+                    </button>
+                    <button type="button" class="btn add-item" onclick="fillSampleResearch()" style="margin-left: 10px;">
+                        <i class="fas fa-flask"></i> Fill Sample Data
+                    </button>
+                </form>
+
+                <div class="loading" id="researchLoading">
+                    <div class="spinner"></div>
+                    <p>Researching...</p>
+                </div>
+
+                <div id="researchResponse" class="response-section" style="display: none;">
+                    <h3><i class="fas fa-search"></i> Research Results</h3>
+                    <div id="researchContent"></div>
+                </div>
+            </div>
+
+            <!-- Code Validation Tab -->
+            <div id="validate" class="tab-content">
+                <h2><i class="fas fa-check-circle"></i> Code Validation</h2>
+                <form id="validateForm">
+                    <div class="form-group">
+                        <label for="validateCode">Code to Validate *</label>
+                        <textarea id="validateCode" name="code" placeholder="Paste your code here for validation..." required style="min-height: 200px; font-family: 'Courier New', monospace;"></textarea>
+                        <div class="helper-text">Paste the code you want to validate for syntax, logic, and best practices</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="validateUseCase">Use Case Context (Optional)</label>
+                        <select id="validateUseCase" name="use_case">
+                            <option value="">Select context...</option>
+                            <option value="web_app">Web Application</option>
+                            <option value="api">API Development</option>
+                            <option value="data_processing">Data Processing</option>
+                            <option value="automation">Automation Script</option>
+                            <option value="blockchain">Blockchain Contract</option>
+                            <option value="ml_ai">Machine Learning/AI</option>
+                            <option value="database">Database Operations</option>
+                            <option value="integration">System Integration</option>
+                            <option value="mobile">Mobile Application</option>
+                            <option value="testing">Testing Framework</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Validation Criteria</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="checkbox" id="syntaxCheck" checked style="margin-right: 8px; width: auto;">
+                                Syntax Validation
+                            </label>
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="checkbox" id="semanticCheck" checked style="margin-right: 8px; width: auto;">
+                                Logic Analysis
+                            </label>
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="checkbox" id="securityCheck" checked style="margin-right: 8px; width: auto;">
+                                Security Review
+                            </label>
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="checkbox" id="gasEstimation" style="margin-right: 8px; width: auto;">
+                                Performance Analysis
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-check-circle"></i> Validate Code
+                    </button>
+                    <button type="button" class="btn add-item" onclick="fillSampleValidation()" style="margin-left: 10px;">
+                        <i class="fas fa-flask"></i> Fill Sample Data
+                    </button>
+                </form>
+
+                <div class="loading" id="validateLoading">
+                    <div class="spinner"></div>
+                    <p>Validating code...</p>
+                </div>
+
+                <div id="validateResponse" class="response-section" style="display: none;">
+                    <h3><i class="fas fa-check-circle"></i> Validation Results</h3>
+                    <div id="validateContent"></div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base Tab -->
+            <div id="knowledge" class="tab-content">
+                <h2><i class="fas fa-database"></i> Knowledge Base Management</h2>
+                <p>Upload documents and manage your knowledge base for enhanced AI responses.</p>
+
+                <!-- Step-by-Step Guide -->
+                <div class="response-section" style="margin-bottom: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px;">
+                    <h3 style="color: white; margin-bottom: 20px;"><i class="fas fa-route"></i> How to Add Documents to Knowledge Base</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
+                            <h4 style="color: white; margin-bottom: 10px;"><span style="background: #fff; color: #667eea; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 8px;">1</span>Upload Files</h4>
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Select files or drag & drop documents. Supports TXT, MD, PDF, DOCX, PY, JS, JSON, RST, TEX formats.</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
+                            <h4 style="color: white; margin-bottom: 10px;"><span style="background: #fff; color: #667eea; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 8px;">2</span>Process Files</h4>
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Click "Process Uploaded Files" to add your documents to the vector database for AI search.</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
+                            <h4 style="color: white; margin-bottom: 10px;"><span style="background: #fff; color: #667eea; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 8px;">3</span>Ready to Use</h4>
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Your documents are now available for AI-powered code generation and research queries!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Knowledge Base Stats -->
+                <div class="response-section" style="margin-bottom: 30px;">
+                    <h3><i class="fas fa-chart-bar"></i> Knowledge Base Statistics</h3>
+                    <div id="knowledgeStats">
+                        <div id="knowledgeStatsContent"></div>
+                    </div>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="response-section" style="margin-bottom: 30px;">
+                    <h3><i class="fas fa-upload"></i> 📁 Step 1: Upload Documents</h3>
+                    <p style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
+                        <i class="fas fa-info-circle"></i> <strong>Getting Started:</strong> Upload your documents here. They will be saved locally first, then processed into the knowledge base in the next step.
+                    </p>
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label>Upload Type</label>
+                            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; font-weight: normal;">
+                                    <input type="radio" name="uploadType" value="files" checked style="margin-right: 8px; width: auto;">
+                                    Individual Files
+                                </label>
+                                <label style="display: flex; align-items: center; font-weight: normal;">
+                                    <input type="radio" name="uploadType" value="directory" style="margin-right: 8px; width: auto;">
+                                    Entire Directory
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fileUpload">Select Files/Directory *</label>
+                            <div class="file-upload-area" id="fileUploadArea"
+                                 style="padding: 20px; border: 2px dashed #667eea; border-radius: 8px; background: #f8f9fa; text-align: center; cursor: pointer; transition: all 0.3s ease;">
+                                <input type="file" id="fileUpload" name="files" multiple accept=".txt,.md,.pdf,.docx,.py,.js,.json,.rst,.tex"
+                                       style="display: none;">
+                                <div id="uploadIcon" style="font-size: 2rem; color: #667eea; margin-bottom: 10px;">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <div id="uploadText" style="font-weight: bold; margin-bottom: 5px;">
+                                    Click to select multiple files or drag & drop
+                                </div>
+                                <div class="helper-text" id="uploadHelperText">Supported formats: TXT, MD, PDF, DOCX, PY, JS, JSON, RST, TEX</div>
+                            </div>
+
+                            <!-- File Preview List -->
+                            <div id="filePreviewList" style="display: none; margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e9ecef;">
+                                <h4 style="margin: 0 0 10px 0; color: #333;"><i class="fas fa-list"></i> Selected Files:</h4>
+                                <div id="filePreviewContent"></div>
+                                <div style="margin-top: 10px;">
+                                    <button type="button" onclick="clearFileSelection()" class="btn" style="background: #6c757d; padding: 8px 16px; font-size: 0.9rem;">
+                                        <i class="fas fa-times"></i> Clear Selection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fileCategory">Category</label>
+                            <input type="text" id="fileCategory" name="category" list="categoryOptions" placeholder="Enter or select a category">
+                            <datalist id="categoryOptions">
+                                <option value="documents">General Documents</option>
+                                <option value="tutorials">Tutorials</option>
+                                <option value="guides">Guides</option>
+                                <option value="examples">Code Examples</option>
+                                <option value="reference">Reference Materials</option>
+                                <option value="api">API Documentation</option>
+                                <option value="blockchain">Blockchain</option>
+                                <option value="ergoscript">ErgoScript</option>
+                                <option value="smart-contracts">Smart Contracts</option>
+                                <option value="defi">DeFi</option>
+                            </datalist>
+                            <div class="helper-text">You can enter a custom category or select from the suggestions</div>
+                        </div>
+
+                        <div class="form-group" id="structureOption" style="display: none;">
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="checkbox" id="preserveStructure" checked style="margin-right: 8px; width: auto;">
+                                Preserve Directory Structure
+                            </label>
+                            <div class="helper-text">Keep the original folder structure when uploading directories</div>
+                        </div>
+
+                        <button type="submit" class="btn">
+                            <i class="fas fa-upload"></i> Upload Files
+                        </button>
+                    </form>
+
+                    <div id="uploadProgress" style="display: none; margin-top: 15px;">
+                        <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
+                            <div id="uploadProgressBar" style="background: #667eea; height: 6px; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <p id="uploadStatus" style="margin-top: 10px; font-size: 0.9rem;"></p>
+                    </div>
+
+                    <div id="uploadResults" style="display: none; margin-top: 15px;"></div>
+                </div>
+
+                <!-- Ingestion Management -->
+                <div class="response-section" style="margin-bottom: 30px;">
+                    <h3><i class="fas fa-cogs"></i> ⚙️ Step 2: Process & Manage Knowledge Base</h3>
+                    <p style="background: #fff3cd; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Important:</strong> After uploading files, click "Process Uploaded Files" to make them searchable by the AI. Use "Refresh" to update existing documents.
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <button onclick="ingestUploadedFiles()" class="btn" style="background: #28a745; display: flex; flex-direction: column; align-items: center; padding: 20px; height: auto;">
+                            <i class="fas fa-file" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                            <span style="font-weight: bold;">Process Uploaded Files</span>
+                            <span style="font-size: 0.8rem; opacity: 0.9; margin-top: 4px;">Add new files to knowledge base</span>
+                        </button>
+                        <button onclick="refreshKnowledgeBase()" class="btn" style="background: #ffc107; color: #212529; display: flex; flex-direction: column; align-items: center; padding: 20px; height: auto;">
+                            <i class="fas fa-sync" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                            <span style="font-weight: bold;">Refresh Knowledge Base</span>
+                            <span style="font-size: 0.8rem; opacity: 0.9; margin-top: 4px;">Update existing documents</span>
+                        </button>
+                        <button onclick="ingestErgoScript()" class="btn" style="background: #6f42c1; display: flex; flex-direction: column; align-items: center; padding: 20px; height: auto;">
+                            <i class="fas fa-download" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                            <span style="font-weight: bold;">Ingest ErgoScript</span>
+                            <span style="font-size: 0.8rem; opacity: 0.9; margin-top: 4px;">Add official ErgoScript docs</span>
+                        </button>
+                        <button onclick="clearKnowledgeBase()" class="btn" style="background: #dc3545; display: flex; flex-direction: column; align-items: center; padding: 20px; height: auto;">
+                            <i class="fas fa-trash" style="font-size: 1.5rem; margin-bottom: 8px;"></i>
+                            <span style="font-weight: bold;">Clear Knowledge Base</span>
+                            <span style="font-size: 0.8rem; opacity: 0.9; margin-top: 4px;">Delete all documents</span>
+                        </button>
+                    </div>
+
+                    <div id="ingestionStatus" style="display: none;">
+                        <h4><i class="fas fa-spinner fa-spin"></i> Ingestion Progress</h4>
+                        <div style="background: #e9ecef; border-radius: 4px; overflow: hidden; margin: 10px 0;">
+                            <div id="ingestionProgressBar" style="background: #28a745; height: 8px; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <p id="ingestionMessage" style="font-size: 0.9rem; margin: 5px 0;"></p>
+                        <div id="ingestionResults"></div>
+                    </div>
+                </div>
+
+                <!-- Active Jobs -->
+                <div class="response-section">
+                    <h3><i class="fas fa-tasks"></i> 📊 Active Jobs & Status</h3>
+                    <div id="activeJobs">
+                        <p style="color: #666; font-style: italic;">No active jobs</p>
+                    </div>
+                    <button onclick="loadActiveJobs()" class="btn add-item" style="margin-top: 10px;">
+                        <i class="fas fa-refresh"></i> Refresh Jobs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Agent Status Tab -->
+            <div id="status" class="tab-content">
+                <h2><i class="fas fa-heartbeat"></i> Agent Status</h2>
+                <p>Monitor the health and performance of the AI agents.</p>
+
+                <button onclick="checkAgentStatus()" class="btn" style="margin: 20px 0;">
+                    <i class="fas fa-refresh"></i> Check Status
+                </button>
+
+                <div class="loading" id="statusLoading">
+                    <div class="spinner"></div>
+                    <p>Checking agent status...</p>
+                </div>
+
+                <div id="statusResponse" class="response-section" style="display: none;">
+                    <h3><i class="fas fa-heartbeat"></i> Agent Health Status</h3>
+                    <div id="statusContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -159,8 +159,9 @@ class GenerationEngine:
                 documentation=documentation,
             )
 
-            generated_code = result.code
-            explanation = result.explanation
+            # Safely extract code and explanation from DSPy result
+            generated_code = self._extract_text_from_result(result, "code", "")
+            explanation = self._extract_text_from_result(result, "explanation", "")
 
             # Review and improve code if requested
             if review_code and generated_code:
@@ -171,12 +172,17 @@ class GenerationEngine:
                     )
 
                     # Use improved code if available
-                    if (
-                        hasattr(review_result, "improved_code")
-                        and review_result.improved_code
-                    ):
-                        generated_code = review_result.improved_code
-                        explanation += f"\n\nCode Review: {review_result.review}"
+                    improved_code = self._extract_text_from_result(
+                        review_result, "improved_code", ""
+                    )
+                    review_text = self._extract_text_from_result(
+                        review_result, "review", ""
+                    )
+
+                    if improved_code:
+                        generated_code = improved_code
+                        if review_text:
+                            explanation += f"\n\nCode Review: {review_text}"
 
                 except Exception as e:
                     logger.warning(f"Code review failed: {str(e)}")
@@ -238,7 +244,7 @@ class GenerationEngine:
                 context=formatted_context,
             )
 
-            generated_text = result.answer
+            generated_text = self._extract_text_from_result(result, "answer", "")
             confidence_score = self._calculate_confidence_score(context, generated_text)
             source_docs = [doc.document_id for doc in context.retrieved_documents]
 
@@ -281,7 +287,7 @@ class GenerationEngine:
                 context=formatted_context,
             )
 
-            generated_text = result.answer
+            generated_text = self._extract_text_from_result(result, "answer", "")
             confidence_score = self._calculate_confidence_score(context, generated_text)
             source_docs = [doc.document_id for doc in context.retrieved_documents]
 
@@ -396,6 +402,38 @@ class GenerationEngine:
 
         # Ensure score is in valid range
         return max(0.0, min(1.0, score))
+
+    def _extract_text_from_result(
+        self, result, attribute: str, default: str = ""
+    ) -> str:
+        """
+        Safely extract text from DSPy result, handling different response types.
+
+        Args:
+            result: DSPy result object
+            attribute: Attribute name to extract
+            default: Default value if extraction fails
+
+        Returns:
+            Extracted text as string
+        """
+        try:
+            value = getattr(result, attribute, default)
+
+            # Handle different response types from DSPy
+            if isinstance(value, list):
+                # DSPy sometimes returns a list of responses
+                return value[0] if value else default
+            elif hasattr(value, "text"):
+                # Sometimes wrapped in an object
+                return value.text
+            else:
+                # Direct string response
+                return str(value) if value else default
+
+        except Exception as e:
+            logger.warning(f"Failed to extract '{attribute}' from DSPy result: {e}")
+            return default
 
     def _estimate_code_complexity(self, code: str) -> ComplexityLevel:
         """Estimate the complexity of generated ErgoScript code."""

@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from ..config import get_settings
-from ..rag.embeddings import EmbeddingService
+from ..rag.embeddings import LocalEmbeddingService
 from ..rag.models import Document
 from ..rag.vectorstore import VectorStoreManager
 from .collector import collect_ergoscript_knowledge_base
@@ -39,33 +39,47 @@ class KnowledgeBaseManager:
     def __init__(
         self,
         vector_store: Optional[VectorStoreManager] = None,
-        embedding_service: Optional[EmbeddingService] = None,
+        embedding_service: Optional[LocalEmbeddingService] = None,
         processor: Optional[DocumentProcessor] = None,
     ):
-        from ..config import get_settings
         from ..rag.models import VectorStoreConfig
 
         # Initialize components with proper dependencies
         if embedding_service is None:
-            settings = get_settings()
-            self.embedding_service = EmbeddingService(
-                model_name="text-embedding-3-large", api_key=settings.openai.api_key
+            from ..rag.embeddings import get_embedding_service
+
+            self.embedding_service = get_embedding_service()
+            logger.info(
+                f"✅ Initialized embedding service: {self.embedding_service.model_name} (local: {self.embedding_service.is_local})"
             )
         else:
             self.embedding_service = embedding_service
 
         if vector_store is None:
-            # Create default vector store config
+            # Get embedding dimension from the service
+            embedding_dim = self.embedding_service.get_embedding_dimension()
+
+            # Get provider-specific configuration
+            from ..config import get_settings
+
+            settings = get_settings()
+            collection_name = settings.get_provider_collection_name()
+            persist_directory = settings.get_provider_persist_directory()
+
+            # Create provider-specific vector store config
             config = VectorStoreConfig(
-                collection_name="ergoscript_examples",
-                embedding_dimension=3072,  # text-embedding-3-large dimension
+                collection_name=collection_name,
+                embedding_dimension=embedding_dim,
                 distance_metric="cosine",
             )
 
             self.vector_store = VectorStoreManager(
                 config=config,
                 embedding_service=self.embedding_service,
-                persist_directory="./data/chroma",
+                persist_directory=persist_directory,
+            )
+            logger.info(
+                f"✅ Initialized vector store '{collection_name}' with {embedding_dim} dimensions"
             )
         else:
             self.vector_store = vector_store
@@ -196,21 +210,99 @@ class KnowledgeBaseManager:
         return stored_count
 
     async def get_knowledge_base_stats(self) -> dict:
-        """Get statistics about the knowledge base."""
+        """Get comprehensive statistics about the knowledge base."""
         try:
             collection_stats = self.vector_store.get_collection_stats()
 
+            # Get basic collection info
+            collection_name = collection_stats.get(
+                "collection_name", self.vector_store.config.collection_name
+            )
+            document_count = collection_stats.get("document_count", 0)
+
+            # Calculate storage size (rough estimate based on document count)
+            # This is a simplified calculation - in production you might want more accurate sizing
+            storage_size_mb = document_count * 0.01  # Rough estimate: 10KB per document
+
+            # Get available categories by querying the vector store for unique metadata values
+            available_categories = []
+            try:
+                # Try to get some sample documents to extract categories
+                if document_count > 0:
+                    sample_results = self.vector_store.search_by_text(
+                        "", top_k=min(100, document_count)
+                    )
+                    categories_set = set()
+                    for result in sample_results:
+                        if (
+                            hasattr(result.metadata, "category")
+                            and result.metadata.category
+                        ):
+                            categories_set.add(result.metadata.category)
+                        elif (
+                            isinstance(result.metadata, dict)
+                            and "category" in result.metadata
+                        ):
+                            categories_set.add(result.metadata["category"])
+                    available_categories = list(categories_set)
+            except Exception as e:
+                logger.debug(f"Could not extract categories: {e}")
+                available_categories = [
+                    "examples",
+                    "tutorials",
+                    "reference",
+                    "guides",
+                ]  # Default categories
+
+            # Create collections info
+            collections = {
+                collection_name: {
+                    "count": document_count,
+                    "embedding_dimension": collection_stats.get(
+                        "embedding_dimension", 0
+                    ),
+                    "distance_metric": collection_stats.get(
+                        "distance_metric", "cosine"
+                    ),
+                }
+            }
+
+            # Get last updated time (simplified - you might want to track this more accurately)
+            from datetime import datetime
+
+            last_updated = datetime.now().isoformat() if document_count > 0 else None
+
             return {
-                "collection_name": collection_stats.get(
-                    "collection_name", "ergoscript_examples"
-                ),
-                "document_count": collection_stats.get("document_count", 0),
+                # Original fields for backward compatibility
+                "collection_name": collection_name,
+                "document_count": document_count,
                 "embedding_dimension": collection_stats.get("embedding_dimension", 0),
                 "distance_metric": collection_stats.get("distance_metric", "cosine"),
+                # New comprehensive fields expected by the API
+                "collections": collections,
+                "total_documents": document_count,
+                "total_chunks": document_count,  # Assuming 1 chunk per document for now
+                "storage_size_mb": storage_size_mb,
+                "last_updated": last_updated,
+                "available_categories": available_categories,
             }
         except Exception as e:
             logger.error(f"Error getting knowledge base stats: {e}")
-            return {}
+            return {
+                "collections": {},
+                "total_documents": 0,
+                "total_chunks": 0,
+                "storage_size_mb": 0.0,
+                "last_updated": None,
+                "available_categories": [],
+                # Backward compatibility
+                "collection_name": self.vector_store.config.collection_name
+                if self.vector_store
+                else "unknown",
+                "document_count": 0,
+                "embedding_dimension": 0,
+                "distance_metric": "cosine",
+            }
 
     async def refresh_knowledge_base(self) -> IngestionResult:
         """Refresh the knowledge base with latest data."""
@@ -246,6 +338,114 @@ class KnowledgeBaseManager:
         except Exception as e:
             logger.error(f"Error searching knowledge base: {e}")
             return []
+
+    async def clear_knowledge_base(self) -> dict:
+        """Clear all documents from the knowledge base."""
+        try:
+            logger.info("Clearing entire knowledge base...")
+
+            # Reset the collection (clears all documents)
+            self.vector_store.reset_collection()
+
+            logger.info("Knowledge base cleared successfully")
+            return {"success": True, "message": "Knowledge base cleared successfully"}
+
+        except Exception as e:
+            logger.error(f"Error clearing knowledge base: {e}")
+            return {
+                "success": False,
+                "message": f"Failed to clear knowledge base: {str(e)}",
+            }
+
+    async def clear_knowledge_base_by_category(self, category: str) -> dict:
+        """Clear documents from a specific category in the knowledge base."""
+        try:
+            logger.info(f"Clearing documents from category: {category}")
+
+            # Get all documents in the collection
+            collection_stats = self.vector_store.get_collection_stats()
+            document_count = collection_stats.get("document_count", 0)
+
+            if document_count == 0:
+                return {
+                    "success": True,
+                    "deleted_count": 0,
+                    "message": f"No documents found in category '{category}'",
+                }
+
+            # Search for documents in the category to get their IDs
+            # We'll use a broad search to get all documents, then filter by category
+            try:
+                all_results = self.vector_store.search_by_text("", top_k=document_count)
+                category_ids = []
+
+                for result in all_results:
+                    # Check if this document belongs to the target category
+                    doc_category = None
+                    if hasattr(result.metadata, "category"):
+                        doc_category = result.metadata.category
+                    elif (
+                        isinstance(result.metadata, dict)
+                        and "category" in result.metadata
+                    ):
+                        doc_category = result.metadata["category"]
+
+                    if doc_category == category:
+                        # Extract document ID from metadata or use a unique identifier
+                        doc_id = None
+                        if hasattr(result.metadata, "id"):
+                            doc_id = result.metadata.id
+                        elif (
+                            isinstance(result.metadata, dict)
+                            and "id" in result.metadata
+                        ):
+                            doc_id = result.metadata["id"]
+                        elif hasattr(result, "id"):
+                            doc_id = result.id
+
+                        if doc_id:
+                            category_ids.append(doc_id)
+
+                # Delete documents by ID if the vector store supports it
+                deleted_count = 0
+                if hasattr(self.vector_store, "delete_by_ids") and category_ids:
+                    deleted_count = self.vector_store.delete_by_ids(category_ids)
+                else:
+                    # Fallback: If we can't delete by ID, we'll need to recreate the collection
+                    # without the documents from this category
+                    logger.warning(
+                        f"Vector store doesn't support deletion by ID. Cannot selectively delete category '{category}'"
+                    )
+                    return {
+                        "success": False,
+                        "deleted_count": 0,
+                        "message": "Selective deletion not supported. Use full knowledge base clear instead.",
+                    }
+
+                logger.info(
+                    f"Deleted {deleted_count} documents from category '{category}'"
+                )
+                return {
+                    "success": True,
+                    "deleted_count": deleted_count,
+                    "message": f"Deleted {deleted_count} documents from category '{category}'",
+                }
+
+            except Exception as search_error:
+                logger.error(f"Error searching for category documents: {search_error}")
+                return {
+                    "success": False,
+                    "deleted_count": 0,
+                    "message": f"Failed to find documents in category '{category}': {str(search_error)}",
+                }
+
+        except Exception as e:
+            logger.error(f"Error clearing category {category}: {e}")
+            return {
+                "success": False,
+                "deleted_count": 0,
+                "message": f"Failed to clear category '{category}': {str(e)}",
+            }
 
 
 class IngestionPipeline:

@@ -323,7 +323,9 @@ class RAGPipeline:
         if query.intent:
             return self.retrieval_engine.retrieve_with_intent(query, query.intent)
         else:
-            return self.retrieval_engine.retrieve(query, strategy="hybrid")
+            # Since retrieve is async, we'll need to handle this differently
+            # For now, use synchronous hybrid retrieval directly
+            return self.retrieval_engine._hybrid_retrieval(query)
 
     def _rerank_documents(self, query: Query, results):
         """Rerank retrieved documents."""

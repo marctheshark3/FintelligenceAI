@@ -1,0 +1,6 @@
+documents/test-doc.md
+documents/example_advanced_nft-contract.md
+categories/tutorials/demo_ergoscript_tutorial.md
+https://github.com/ergo-pad/ergo-python-appkit
+https://github.com/ergoplatform/eips
+https://github.com/ergoplatform/ergoscript-by-example
