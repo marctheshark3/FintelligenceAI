@@ -381,7 +381,7 @@ class RetrievalEngine:
 
         # Calculate combined scores and sort
         combined_results = []
-        for doc_id, scores in doc_scores.items():
+        for _doc_id, scores in doc_scores.items():
             combined_score = scores["semantic"] + scores["keyword"]
             result = scores["result"]
             result.score = combined_score

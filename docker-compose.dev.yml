@@ -1,0 +1,125 @@
+version: '3.8'
+
+# Development override configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # =============================================================================
+  # DEVELOPMENT OVERRIDES
+  # =============================================================================
+
+  # API Development Settings
+  fintelligence-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: development  # Add development stage if needed
+    environment:
+      - APP_ENVIRONMENT=development
+      - APP_DEBUG=true
+      - API_RELOAD=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      # Live code reloading for development
+      - ./src:/app/src:ro
+      - ./knowledge-base:/app/knowledge-base:ro
+      # Development data persistence
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: >
+      python -m uvicorn fintelligence_ai.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/src
+      --log-level debug
+    ports:
+      - "8000:8000"  # Direct access for development
+
+  # UI Development Settings
+  fintelligence-ui:
+    environment:
+      - NODE_ENV=development
+      - API_BASE_URL=http://localhost:8000
+    volumes:
+      # Live UI updates
+      - ./ui:/usr/share/nginx/html:ro
+
+  # Development Database with exposed port
+  postgres:
+    ports:
+      - "5432:5432"  # Expose for direct database access
+    environment:
+      - POSTGRES_DB=fintelligence_ai_dev
+    volumes:
+      # Development data persistence
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./data/backups:/backups
+
+  # Development Redis with exposed port
+  redis:
+    ports:
+      - "6379:6379"  # Expose for direct Redis access
+    command: redis-server --appendonly yes --save 60 1000
+
+  # Development ChromaDB with exposed port
+  chromadb:
+    ports:
+      - "8100:8000"  # Expose for direct ChromaDB access
+    environment:
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["*"]
+    volumes:
+      - chroma_dev_data:/chroma/chroma
+
+  # =============================================================================
+  # DEVELOPMENT TOOLS
+  # =============================================================================
+
+
+
+  # Database administration tool
+  adminer:
+    image: adminer:latest
+    container_name: fintelligence-adminer
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    networks:
+      - fintelligence-network
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+
+  # Redis administration tool
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: fintelligence-redis-commander
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - fintelligence-network
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+  # =============================================================================
+  # DEVELOPMENT VOLUMES
+  # =============================================================================
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  chroma_dev_data:
+    driver: local
+
+# =============================================================================
+# DEVELOPMENT NETWORKS
+# =============================================================================
+networks:
+  fintelligence-network:
+    external: false

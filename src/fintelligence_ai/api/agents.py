@@ -234,7 +234,9 @@ async def generate_code(
 
     except Exception as e:
         logger.error(f"Error generating code: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.post("/generate-code/simple")
@@ -282,7 +284,9 @@ async def generate_code_simple(
 
     except Exception as e:
         logger.error(f"Error in simple code generation: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.post("/research")
@@ -328,7 +332,9 @@ async def research_query(
 
     except Exception as e:
         logger.error(f"Error in research query: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.post("/research-summary")
@@ -423,7 +429,9 @@ async def research_summary(
 
     except Exception as e:
         logger.error(f"Error in research summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.post("/validate-code")
@@ -470,7 +478,9 @@ async def validate_code(
 
     except Exception as e:
         logger.error(f"Error in code validation: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.get("/status", response_model=OrchestrationStatusResponse)
@@ -499,7 +509,9 @@ async def get_agent_status(
 
     except Exception as e:
         logger.error(f"Error getting agent status: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.post("/reset")
@@ -524,7 +536,9 @@ async def reset_agents(
 
     except Exception as e:
         logger.error(f"Error resetting agents: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 # Background task endpoints
@@ -561,7 +575,7 @@ async def generate_code_async(
                 "task_id": task_id,
             }
 
-            result = await orchestrator.execute_task(
+            await orchestrator.execute_task(
                 task_type=TaskType.CODE_GENERATION,
                 content=request.description,
                 context=context,

@@ -221,7 +221,9 @@ async def optimize_system_component(
 
     except Exception as e:
         logger.error(f"Optimization failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Optimization failed: {str(e)}"
+        ) from e
 
 
 @router.post("/evaluate", response_model=EvaluationResult)
@@ -311,7 +313,9 @@ async def evaluate_system(
 
     except Exception as e:
         logger.error(f"Evaluation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Evaluation failed: {str(e)}"
+        ) from e
 
 
 @router.get(
@@ -492,7 +496,9 @@ async def run_system_benchmark() -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Benchmark failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Benchmark failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Benchmark failed: {str(e)}"
+        ) from e
 
 
 @router.get("/metrics/summary")
@@ -525,7 +531,7 @@ async def get_metrics_summary() -> dict[str, Any]:
         logger.error(f"Failed to get metrics summary: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to get metrics summary: {str(e)}"
-        )
+        ) from e
 
 
 # Background task functions

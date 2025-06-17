@@ -451,7 +451,7 @@ async def clear_knowledge_base(
         logger.error(f"Failed to clear knowledge base: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to clear knowledge base: {str(e)}"
-        )
+        ) from e
 
 
 @router.delete("/clear/{category}")
@@ -472,7 +472,7 @@ async def clear_knowledge_base_by_category(
         logger.error(f"Failed to clear category {category}: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to clear category: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/categories")
@@ -490,7 +490,7 @@ async def get_available_categories(
         logger.error(f"Failed to get categories: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to get categories: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/stats", response_model=KnowledgeStatsResponse)
@@ -514,7 +514,7 @@ async def get_knowledge_stats(
         logger.error(f"Failed to get knowledge stats: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to get knowledge stats: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/refresh")
@@ -546,7 +546,7 @@ async def refresh_knowledge_base(
         logger.error(f"Failed to start refresh: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to start refresh: {str(e)}"
-        )
+        ) from e
 
 
 async def run_refresh_task(job_id: str, knowledge_manager: KnowledgeBaseManager):
@@ -572,30 +572,6 @@ async def run_refresh_task(job_id: str, knowledge_manager: KnowledgeBaseManager)
         _ingestion_jobs[job_id].status = "failed"
         _ingestion_jobs[job_id].progress = 1.0
         _ingestion_jobs[job_id].message = f"Refresh failed: {str(e)}"
-
-
-@router.delete("/clear")
-async def clear_knowledge_base(
-    confirm: bool = False,
-    knowledge_manager: KnowledgeBaseManager = Depends(get_knowledge_manager),
-) -> dict[str, str]:
-    """Clear all documents from the knowledge base."""
-    if not confirm:
-        raise HTTPException(
-            status_code=400,
-            detail="Please set confirm=true to clear the knowledge base",
-        )
-
-    try:
-        # This would need to be implemented in the knowledge manager
-        # For now, return a placeholder response
-        return {"message": "Knowledge base clearing is not yet implemented"}
-
-    except Exception as e:
-        logger.error(f"Failed to clear knowledge base: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to clear knowledge base: {str(e)}"
-        )
 
 
 @router.get("/health")

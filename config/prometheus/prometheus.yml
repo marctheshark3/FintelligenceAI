@@ -1,0 +1,57 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # FintelligenceAI API monitoring
+  - job_name: 'fintelligence-api'
+    static_configs:
+      - targets: ['fintelligence-api:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # PostgreSQL monitoring (if postgres_exporter is used)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Redis monitoring (if redis_exporter is used)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # ChromaDB monitoring
+  - job_name: 'chromadb'
+    static_configs:
+      - targets: ['chromadb:8000']
+    metrics_path: '/api/v1/heartbeat'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Node exporter for system metrics (if added)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Ollama monitoring (if available)
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+    metrics_path: '/api/tags'
+    scrape_interval: 60s
+    scrape_timeout: 10s

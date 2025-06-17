@@ -406,7 +406,7 @@ class LocalEmbeddingService:
                 )
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI embeddings: {e}")
-                raise ValueError("No embedding service available")
+                raise ValueError("No embedding service available") from e
 
     @property
     def model_name(self) -> str:

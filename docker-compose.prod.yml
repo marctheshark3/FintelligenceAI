@@ -1,0 +1,273 @@
+version: '3.8'
+
+# Production override configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  # =============================================================================
+  # PRODUCTION OVERRIDES
+  # =============================================================================
+
+  # API Production Settings
+  fintelligence-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: production
+    environment:
+      - APP_ENVIRONMENT=production
+      - APP_DEBUG=false
+      - API_RELOAD=false
+      - LOG_LEVEL=INFO
+      - WORKER_PROCESSES=4
+    volumes:
+      # Remove development volumes, only keep data
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: >
+      gunicorn fintelligence_ai.api.main:app
+      -w 4
+      -k uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --timeout 120
+      --keep-alive 5
+      --max-requests 1000
+      --max-requests-jitter 100
+      --preload
+      --access-logfile -
+      --error-logfile -
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # UI Production Settings
+  fintelligence-ui:
+    environment:
+      - NODE_ENV=production
+      - API_BASE_URL=http://fintelligence-api:8000
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # Production Database Settings
+  postgres:
+    environment:
+      - POSTGRES_DB=fintelligence_ai_prod
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./data/backups:/backups
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+    # Remove exposed ports for security
+    ports: []
+
+  # Production Redis Settings
+  redis:
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    # Remove exposed ports for security
+    ports: []
+
+  # Production ChromaDB Settings
+  chromadb:
+    environment:
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["http://fintelligence-api:8000"]
+    volumes:
+      - chroma_prod_data:/chroma/chroma
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+    # Remove exposed ports for security
+    ports: []
+
+  # =============================================================================
+  # PRODUCTION MONITORING
+  # =============================================================================
+
+  # Enhanced Prometheus for production
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_prod_data:/prometheus
+
+  # Enhanced Grafana for production
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-secure_password_change_me}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+    volumes:
+      - grafana_prod_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+
+  # =============================================================================
+  # PRODUCTION NETWORKING & SECURITY
+  # =============================================================================
+
+  # Enable Nginx reverse proxy for production
+  nginx:
+    profiles: []  # Remove profile restriction for production
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+      - NGINX_WORKER_CONNECTIONS=1024
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # =============================================================================
+  # PRODUCTION BACKUP SERVICE
+  # =============================================================================
+
+  # Database backup service
+  postgres-backup:
+    image: postgres:15-alpine
+    container_name: fintelligence-backup
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    command: >
+      sh -c "
+      while true; do
+        sleep 86400  # Daily backups
+        pg_dump -h postgres -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /backups/backup_$(date +%Y%m%d_%H%M%S).sql
+        find /backups -name '*.sql' -mtime +7 -delete  # Keep 7 days
+      done"
+    networks:
+      - fintelligence-network
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+# =============================================================================
+# PRODUCTION VOLUMES
+# =============================================================================
+volumes:
+  postgres_prod_data:
+    driver: local
+  chroma_prod_data:
+    driver: local
+  prometheus_prod_data:
+    driver: local
+  grafana_prod_data:
+    driver: local
+
+# =============================================================================
+# PRODUCTION SECRETS (Use Docker Secrets in real production)
+# =============================================================================
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt

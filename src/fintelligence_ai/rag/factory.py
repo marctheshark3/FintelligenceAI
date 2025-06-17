@@ -238,7 +238,7 @@ def create_production_pipeline(
     Returns:
         RAG pipeline optimized for production
     """
-    settings = get_settings()
+    _ = get_settings()
 
     # Use production settings
     production_overrides = {

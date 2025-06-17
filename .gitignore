@@ -188,6 +188,10 @@ data/cache/
 src/data/chroma/
 **/data/chroma/
 
+# Knowledge base ingested documents (don't commit changes to these)
+src/knowledge-base/documents/
+knowledge-base/documents/
+
 # Cache directories
 .dspy_cache/
 .cache/

@@ -252,7 +252,7 @@ class OllamaClient:
         """Cleanup HTTP clients."""
         try:
             self.client.close()
-        except:
+        except Exception:
             pass
 
 

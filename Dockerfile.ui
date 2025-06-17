@@ -1,0 +1,97 @@
+# Use Nginx Alpine for serving static files
+FROM nginx:alpine
+
+# Set environment variables
+ENV API_BASE_URL=http://localhost:8000
+
+# Copy static files
+COPY ui/ /usr/share/nginx/html/
+
+# Create custom nginx configuration
+RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
+    echo '    listen 80;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    server_name localhost;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    root /usr/share/nginx/html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    index index.html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Enable gzip compression' >> /etc/nginx/conf.d/default.conf && \
+    echo '    gzip on;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    gzip_vary on;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    gzip_min_length 10240;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    gzip_proxied expired no-cache no-store private auth;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    gzip_types' >> /etc/nginx/conf.d/default.conf && \
+    echo '        text/plain' >> /etc/nginx/conf.d/default.conf && \
+    echo '        text/css' >> /etc/nginx/conf.d/default.conf && \
+    echo '        text/xml' >> /etc/nginx/conf.d/default.conf && \
+    echo '        text/javascript' >> /etc/nginx/conf.d/default.conf && \
+    echo '        application/x-javascript' >> /etc/nginx/conf.d/default.conf && \
+    echo '        application/xml+rss' >> /etc/nginx/conf.d/default.conf && \
+    echo '        application/javascript' >> /etc/nginx/conf.d/default.conf && \
+    echo '        application/json;' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Security headers' >> /etc/nginx/conf.d/default.conf && \
+    echo '    add_header X-Frame-Options "SAMEORIGIN" always;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    add_header X-Content-Type-Options "nosniff" always;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    add_header X-XSS-Protection "1; mode=block" always;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    add_header Referrer-Policy "no-referrer-when-downgrade" always;' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Handle static assets' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        expires 1y;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Cache-Control "public, immutable";' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Handle HTML files' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location ~* \.html$ {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        expires -1;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Cache-Control "no-cache, no-store, must-revalidate";' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Pragma "no-cache";' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Default location' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location / {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        try_files $uri $uri/ /index.html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        expires -1;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Cache-Control "no-cache, no-store, must-revalidate";' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Pragma "no-cache";' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Health check endpoint' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location /health {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        access_log off;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        return 200 "healthy\n";' >> /etc/nginx/conf.d/default.conf && \
+    echo '        add_header Content-Type text/plain;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '' >> /etc/nginx/conf.d/default.conf && \
+    echo '    # Proxy API requests (if needed for development)' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location /api/ {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_pass http://fintelligence-api:8000/;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_set_header Host $host;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_set_header X-Real-IP $remote_addr;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /etc/nginx/conf.d/default.conf && \
+    echo '        proxy_set_header X-Forwarded-Proto $scheme;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '}' >> /etc/nginx/conf.d/default.conf
+
+# Create startup script to handle environment variables
+RUN echo '#!/bin/sh' > /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo 'set -e' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo '' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo '# Replace API_BASE_URL placeholder in JavaScript files' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo 'if [ -n "$API_BASE_URL" ]; then' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo '    echo "Setting API_BASE_URL to: $API_BASE_URL"' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo '    find /usr/share/nginx/html -name "*.js" -type f -exec sed -i "s|http://localhost:8000|$API_BASE_URL|g" {} \;' >> /docker-entrypoint.d/30-inject-api-url.sh && \
+    echo 'fi' >> /docker-entrypoint.d/30-inject-api-url.sh
+
+# Make the script executable
+RUN chmod +x /docker-entrypoint.d/30-inject-api-url.sh
+
+# Create healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

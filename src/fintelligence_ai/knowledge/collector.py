@@ -281,7 +281,7 @@ class ErgoScriptCollector:
             metadata = self._extract_metadata(file, content)
 
             # Extract code blocks
-            code_blocks = self._extract_code_blocks(content)
+            _ = self._extract_code_blocks(content)
 
             # Clean and structure content
             cleaned_content = self._clean_content(content)
