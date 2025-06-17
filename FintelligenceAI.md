@@ -592,13 +592,106 @@ The ingestion system seamlessly integrates with the RAG pipeline:
 - **Maintenance**: Automated testing and monitoring systems
 - **Cost Management**: Efficient model usage and optimization strategies
 
+## 🚀 Quick Start with Docker
+
+### Prerequisites
+
+- **Docker & Docker Compose**: Required for containerized deployment
+- **Git**: For cloning the repository
+- **4GB+ RAM**: Recommended for optimal performance
+- **10GB+ Disk Space**: For Docker images and data storage
+
+### Automated Setup (Recommended)
+
+The fastest way to get FintelligenceAI running is using our automated Docker setup script:
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/marctheshark3/FintelligenceAI.git
+   cd FintelligenceAI
+   ```
+
+2. **Run the automated setup script**
+   ```bash
+   chmod +x scripts/docker-setup.sh
+   ./scripts/docker-setup.sh
+   ```
+
+3. **Choose your deployment mode** when prompted:
+   - **Development** (1): Hot reloading + dev tools
+   - **Production** (2): Optimized for performance
+   - **Basic** (3): Minimal services
+   - **Local AI** (4): Includes Ollama for local models
+
+### Setup Script Features
+
+The `docker-setup.sh` script provides:
+
+- ✅ **System Validation**: Checks Docker installation and requirements
+- ✅ **Environment Configuration**: Creates secure `.env` file automatically
+- ✅ **API Key Setup**: Optional interactive API key configuration
+- ✅ **Password Generation**: Automatic secure password generation
+- ✅ **Service Orchestration**: Starts all services in chosen mode
+- ✅ **Health Verification**: Waits for services to be ready
+
+### Available Script Options
+
+```bash
+# Full interactive setup (recommended for first-time users)
+./scripts/docker-setup.sh
+
+# Quick start if you already have .env configured
+./scripts/docker-setup.sh --start-only
+
+# Setup environment file only
+./scripts/docker-setup.sh --env-only
+
+# Check system requirements without installing
+./scripts/docker-setup.sh --check-only
+
+# Stop all services
+./scripts/docker-setup.sh --stop
+
+# Reset everything (⚠️ destructive - removes all data)
+./scripts/docker-setup.sh --reset
+
+# Show help and all options
+./scripts/docker-setup.sh --help
+```
+
+### Access Points
+
+Once setup is complete, you can access:
+
+- **🌐 Web Interface**: http://localhost:3000
+- **📊 API Documentation**: http://localhost:8000/docs
+- **🔍 API Health Check**: http://localhost:8000/health
+- **📈 Grafana Dashboard**: http://localhost:3001
+- **🔧 Prometheus Metrics**: http://localhost:9090
+
+### API Key Configuration
+
+FintelligenceAI supports multiple AI providers:
+
+- **OpenAI**: Required for GPT models (recommended)
+- **Anthropic**: For Claude models (optional)
+- **GitHub Token**: For enhanced repository access (optional)
+- **Local Models**: Ollama (automatically configured in Local AI mode)
+
+**Post-Setup Configuration**: Edit API keys in `.env` file and restart:
+
+```bash
+nano .env  # Edit your configuration
+docker-compose restart
+```
+
 ## Next Steps
 
-1. **Environment Setup**: Initialize development environment with DSPy and dependencies
-2. **Data Collection**: Gather and curate ErgoScript documentation and examples
-3. **Prototype Development**: Build minimal viable RAG pipeline
-4. **Iterative Enhancement**: Apply DSPy optimizers and expand capabilities
-5. **Production Preparation**: Develop deployment infrastructure and monitoring
+1. **Quick Start**: Use the automated Docker setup script above
+2. **API Integration**: Connect to the API endpoints for custom applications
+3. **Knowledge Base**: Add your own documents using the ingestion system
+4. **Customization**: Adapt the RAG pipeline for your specific use case
+5. **Production Deployment**: Scale using production-ready Docker configurations
 
 ## Contributing Guidelines
 
@@ -622,9 +715,12 @@ The ingestion system seamlessly integrates with the RAG pipeline:
 **Status**: Active Development
 
 ### Recent Updates (June 2025)
+- ✅ **Automated Docker Setup**: Complete one-command deployment with interactive setup script
 - ✅ **Enhanced Knowledge Ingestion System**: Complete rewrite with 100x performance improvement
 - ✅ **Real-Time Progress Tracking**: Visual progress bars and ETA calculations
 - ✅ **GitHub Repository Manifest**: Detailed file tracking and metadata management
 - ✅ **Database Management Tools**: Clear, remove, and visualize knowledge base content
 - ✅ **Advanced Content Categorization**: Intelligent file categorization and organization
 - ✅ **Directory Upload Support**: Upload entire directories with preserved folder structure via web UI
+- ✅ **Production-Ready Infrastructure**: Multi-environment Docker configurations with monitoring
+- ✅ **UI-API Integration**: Fixed connectivity and CORS configuration for seamless operation

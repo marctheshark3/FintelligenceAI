@@ -39,58 +39,169 @@ FintelligenceAI is a comprehensive framework for building modular RAG (Retrieval
 
 ### Prerequisites
 
-- Python 3.9 or higher
-- Docker and Docker Compose
-- OpenAI API key (or other LLM provider)
+- **Docker & Docker Compose**: Required for containerized deployment
+- **Git**: For cloning the repository
+- **4GB+ RAM**: Recommended for optimal performance
+- **10GB+ Disk Space**: For Docker images and data storage
 
-### Installation
+### Installation Options
+
+#### Option 1: Automated Setup (Recommended) 🚀
+
+The fastest way to get FintelligenceAI running is using our automated setup script:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/fintelligence-ai/fintelligence-ai.git
-   cd fintelligence-ai
+   git clone https://github.com/marctheshark3/FintelligenceAI.git
+   cd FintelligenceAI
    ```
 
-2. **Set up environment**
+2. **Run the automated setup script**
    ```bash
-   # Copy environment template
+   chmod +x scripts/docker-setup.sh
+   ./scripts/docker-setup.sh
+   ```
+
+   The script will:
+   - ✅ Check Docker installation and system requirements
+   - ✅ Set up environment configuration
+   - ✅ Configure API keys (optional)
+   - ✅ Generate secure passwords automatically
+   - ✅ Create necessary directories
+   - ✅ Start all services with your chosen deployment mode
+
+3. **Choose your deployment mode** when prompted:
+   - **Development** (1): Hot reloading + dev tools
+   - **Production** (2): Optimized for performance
+   - **Basic** (3): Minimal services
+   - **Local AI** (4): Includes Ollama for local models
+
+#### Option 2: Manual Setup
+
+1. **Clone and setup environment**
+   ```bash
+   git clone https://github.com/marctheshark3/FintelligenceAI.git
+   cd FintelligenceAI
    cp env.template .env
-
-   # Edit .env with your API keys and configuration
-   nano .env
    ```
 
-3. **Install dependencies**
+2. **Edit environment file**
    ```bash
-   # Using Poetry (recommended)
-   pip install poetry
-   poetry install --with dev
-
-   # Or using pip
-   pip install -e ".[dev]"
+   nano .env  # Add your API keys and configuration
    ```
 
-4. **Start services with Docker**
+3. **Start services**
    ```bash
    docker-compose up -d
    ```
 
-5. **Run the application**
-   ```bash
-   # Development mode
-   uvicorn fintelligence_ai.api.main:app --reload
+### ⚡ Setup Script Options
 
-   # Or using the Docker container
-   docker-compose up fintelligence-api
-   ```
+The `docker-setup.sh` script supports various options for different use cases:
 
-### Access Points
+```bash
+# Full interactive setup (recommended for first-time users)
+./scripts/docker-setup.sh
 
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Jupyter Lab**: http://localhost:8888 (token: `fintelligence-dev-token`)
-- **Grafana**: http://localhost:3000 (admin/fintelligence-admin)
-- **ChromaDB**: http://localhost:8100
+# Quick start if you already have .env configured
+./scripts/docker-setup.sh --start-only
+
+# Setup environment file only
+./scripts/docker-setup.sh --env-only
+
+# Check system requirements without installing
+./scripts/docker-setup.sh --check-only
+
+# Stop all services
+./scripts/docker-setup.sh --stop
+
+# Reset everything (⚠️ destructive - removes all data)
+./scripts/docker-setup.sh --reset
+
+# Show help and all options
+./scripts/docker-setup.sh --help
+```
+
+### 🌐 Access Points
+
+Once setup is complete, you can access:
+
+- **🌐 Web Interface**: http://localhost:3000
+- **📊 API Documentation**: http://localhost:8000/docs
+- **🔍 API Health Check**: http://localhost:8000/health
+- **📈 Grafana Dashboard**: http://localhost:3001
+- **🔧 Prometheus Metrics**: http://localhost:9090
+
+### 🔑 API Key Configuration
+
+FintelligenceAI supports multiple AI providers. During setup, you can configure:
+
+- **OpenAI**: Required for GPT models (recommended)
+- **Anthropic**: For Claude models (optional)
+- **GitHub Token**: For enhanced repository access (optional)
+- **Local Models**: Ollama (automatically configured in Local AI mode)
+
+**Post-Setup Configuration**: You can always edit your API keys in the `.env` file and restart services:
+
+```bash
+nano .env  # Edit your configuration
+docker-compose restart
+```
+
+### 🐳 Docker Setup Details
+
+The automated setup script (`scripts/docker-setup.sh`) provides a comprehensive Docker deployment solution:
+
+#### What the Setup Script Does
+
+1. **System Checks**: Verifies Docker installation and system requirements
+2. **Environment Setup**: Creates `.env` file from template with secure defaults
+3. **Password Generation**: Automatically generates secure passwords for databases
+4. **Directory Creation**: Sets up required data and configuration directories
+5. **Service Orchestration**: Starts services in your chosen deployment mode
+6. **Health Verification**: Waits for services to be ready and accessible
+
+#### Deployment Modes Explained
+
+| Mode | Use Case | Includes | Resource Usage |
+|------|----------|----------|----------------|
+| **Development** | Local development with hot reloading | Dev tools, volume mounts, debug info | High |
+| **Production** | Optimized for performance and stability | Optimized builds, health checks | Medium |
+| **Basic** | Minimal setup for testing | Core services only | Low |
+| **Local AI** | Complete offline AI capability | Ollama, local models | High |
+
+#### Troubleshooting
+
+```bash
+# Check service status
+docker-compose ps
+
+# View logs for specific service
+docker-compose logs fintelligence-api
+docker-compose logs fintelligence-ui
+
+# Restart specific service
+docker-compose restart fintelligence-api
+
+# Check system requirements
+./scripts/docker-setup.sh --check-only
+
+# Complete reset if issues persist
+./scripts/docker-setup.sh --reset
+./scripts/docker-setup.sh  # Fresh setup
+```
+
+#### Port Configuration
+
+If you need to change default ports (e.g., if 3000 or 8000 are in use), edit your `.env` file:
+
+```bash
+# Edit ports in .env file
+UI_PORT=3001          # Web interface port
+API_PORT=8001         # API port
+GRAFANA_PORT=3002     # Grafana dashboard port
+OLLAMA_PORT=11435     # Ollama port (if using Local AI mode)
+```
 
 ## 📁 Project Structure
 
@@ -219,12 +330,49 @@ See `env.template` for complete configuration options.
 
 ### Docker Deployment
 
-```bash
-# Production build
-docker-compose -f docker-compose.prod.yml up -d
+#### Using the Setup Script (Recommended)
 
-# With monitoring
-docker-compose --profile monitoring up -d
+```bash
+# Production deployment with automated setup
+./scripts/docker-setup.sh
+# Choose option (2) Production mode when prompted
+
+# Or force production mode directly
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+#### Manual Deployment Options
+
+```bash
+# Development mode with hot reloading
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Production mode (optimized)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Local AI mode (includes Ollama)
+docker-compose --profile local-ai up -d
+
+# Basic mode (minimal services)
+docker-compose up -d
+```
+
+#### Deployment Management
+
+```bash
+# View logs
+docker-compose logs -f fintelligence-api
+
+# Stop services
+./scripts/docker-setup.sh --stop
+# or manually
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# Reset everything (⚠️ removes all data)
+./scripts/docker-setup.sh --reset
 ```
 
 ### Cloud Deployment
